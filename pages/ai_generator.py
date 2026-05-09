@@ -8,7 +8,10 @@ from datetime import date, timedelta
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 
 def call_claude(prompt, system_prompt):
-    api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+    except Exception:
+        api_key = ""
     if not api_key:
         st.error("Missing ANTHROPIC_API_KEY in .streamlit/secrets.toml")
         return None
