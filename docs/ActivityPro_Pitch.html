@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ActivityPro — Product Overview & Integration Proposal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300;1,9..40,400&display=swap" />
+  <style>
+    /* ============================================================
+       CSS CUSTOM PROPERTIES
+    ============================================================ */
+    :root {
+      --teal:        #0F766E;
+      --teal-dark:   #0D5F59;
+      --teal-light:  #CCFBF1;
+      --teal-mid:    #14B8A6;
+      --amber:       #F59E0B;
+      --amber-light: #FEF3C7;
+      --amber-dark:  #D97706;
+      --bg:          #F8FAFC;
+      --surface:     #FFFFFF;
+      --border:      #E2E8F0;
+      --text:        #0F172A;
+      --text-mid:    #475569;
+      --text-light:  #94A3B8;
+      --red-light:   #FEE2E2;
+      --red:         #DC2626;
+    }
+
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       LAYOUT WRAPPER
+    ============================================================ */
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    section {
+      padding: 64px 0;
+      position: relative;
+    }
+
+    section + section {
+      border-top: 1px solid var(--border);
+    }
+
+    /* ============================================================
+       TYPOGRAPHY
+    ============================================================ */
+    h1, h2, h3, h4 {
+      font-family: 'Playfair Display', Georgia, serif;
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    h1 { font-size: 3.5rem; font-weight: 900; }
+    h2 { font-size: 2rem;   font-weight: 700; }
+    h3 { font-size: 1.35rem; font-weight: 600; }
+    h4 { font-size: 1.05rem; font-weight: 600; }
+
+    p  { color: var(--text-mid); font-size: 1rem; line-height: 1.75; }
+
+    strong { color: var(--text); font-weight: 600; }
+
+    /* ============================================================
+       SECTION HEADER COMPONENT
+    ============================================================ */
+    .section-header {
+      margin-bottom: 40px;
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 12px;
+    }
+
+    .section-label::before {
+      content: '';
+      display: inline-block;
+      width: 24px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--teal), var(--teal-mid));
+      border-radius: 2px;
+    }
+
+    .section-header h2 {
+      margin-bottom: 12px;
+    }
+
+    .section-header p {
+      max-width: 640px;
+      font-size: 1.05rem;
+    }
+
+    /* ============================================================
+       ACCENT BAR
+    ============================================================ */
+    .accent-bar {
+      height: 4px;
+      background: linear-gradient(90deg, var(--teal), var(--teal-mid), var(--amber));
+      border-radius: 2px;
+      margin-bottom: 48px;
+    }
+
+    /* ============================================================
+       COVER PAGE
+    ============================================================ */
+    #cover {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: linear-gradient(160deg, var(--teal-dark) 0%, var(--teal) 45%, #0e8a82 100%);
+      padding: 0;
+      border-top: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #cover::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      right: -120px;
+      width: 480px;
+      height: 480px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      pointer-events: none;
+    }
+
+    #cover::after {
+      content: '';
+      position: absolute;
+      bottom: -80px;
+      left: -60px;
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.03);
+      pointer-events: none;
+    }
+
+    .cover-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 80px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 36px;
+    }
+
+    .cover-badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--amber);
+    }
+
+    .cover-logo {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 5.5rem;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .cover-logo span {
+      color: var(--amber);
+    }
+
+    .cover-tagline {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: rgba(255,255,255,0.88);
+      margin-bottom: 40px;
+      letter-spacing: 0.01em;
+    }
+
+    .cover-divider {
+      width: 64px;
+      height: 3px;
+      background: var(--amber);
+      border-radius: 2px;
+      margin-bottom: 32px;
+    }
+
+    .cover-subtitle {
+      font-size: 0.95rem;
+      font-weight: 400;
+      color: rgba(255,255,255,0.65);
+      font-style: italic;
+      margin-bottom: 64px;
+    }
+
+    .cover-meta {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .cover-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .cover-meta-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .cover-meta-value {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .cover-meta-sep {
+      width: 1px;
+      height: 32px;
+      background: rgba(255,255,255,0.15);
+    }
+
+    /* ============================================================
+       PROBLEM SECTION
+    ============================================================ */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 36px;
+    }
+
+    .problem-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .problem-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #DC2626, #EF4444);
+    }
+
+    .problem-icon {
+      font-size: 1.75rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .problem-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .problem-card p {
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+
+    .problem-stat {
+      display: inline-block;
+      background: var(--red-light);
+      color: var(--red);
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 900;
+      padding: 4px 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .problem-intro {
+      background: linear-gradient(135deg, #FEF2F2, #FFF5F5);
+      border: 1px solid #FECACA;
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+    }
+
+    .problem-intro p {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      color: #7F1D1D;
+    }
+
+    /* ============================================================
+       SOLUTION SECTION
+    ============================================================ */
+    #solution {
+      background: var(--surface);
+    }
+
+    .solution-statement {
+      background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+      border-radius: 16px;
+      padding: 36px 40px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .solution-statement::after {
+      content: '"';
+      position: absolute;
+      right: 24px;
+      top: -8px;
+      font-family: 'Playfair Display', serif;
+      font-size: 9rem;
+      color: rgba(255,255,255,0.07);
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .solution-statement p {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.35rem;
+      font-weight: 400;
+      font-style: italic;
+      color: rgba(255,255,255,0.95);
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
+    }
+
+    .solution-statement strong {
+      color: var(--amber);
+      font-weight: 600;
+    }
+
+    .feature-pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .pillar-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 24px;
+      text-align: center;
+      transition: box-shadow 0.2s;
+    }
+
+    .pillar-card:hover {
+      box-shadow: 0 8px 32px rgba(15,118,110,0.1);
+    }
+
+    .pillar-icon {
+      font-size: 2.25rem;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .pillar-card h3 {
+      font-size: 1rem;
+      color: var(--teal-dark);
+      margin-bottom: 14px;
+    }
+
+    .pillar-features {
+      list-style: none;
+      text-align: left;
+    }
+
+    .pillar-features li {
+      font-size: 0.85rem;
+      color: var(--text-mid);
+      padding: 4px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+    }
+
+    .pillar-features li::before {
+      content: '→';
+      color: var(--teal);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+      font-weight: 700;
+    }
+
+    /* ============================================================
+       KEY FEATURES SECTION
+    ============================================================ */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--teal), var(--teal-mid));
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .feature-card:hover::after {
+      opacity: 1;
+    }
+
+    .feature-card-icon {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    .feature-card h4 {
+      color: var(--text);
+      font-size: 0.97rem;
+    }
+
+    .feature-card p {
+      font-size: 0.85rem;
+      line-height: 1.6;
+      flex-grow: 1;
+    }
+
+    .feature-benefit {
+      background: var(--teal-light);
+      color: var(--teal-dark);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 6px;
+      line-height: 1.4;
+    }
+
+    /* ============================================================
+       INTEGRATION SECTION
+    ============================================================ */
+    #integration {
+      background: #F1F5F9;
+    }
+
+    .integration-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px;
+      margin: 32px 0;
+    }
+
+    .integration-diagram-title {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-bottom: 28px;
+    }
+
+    .diagram-center-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 20px;
+    }
+
+    .diagram-box {
+      background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+      color: white;
+      border-radius: 12px;
+      padding: 16px 24px;
+      text-align: center;
+      min-width: 140px;
+    }
+
+    .diagram-box-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 4px;
+    }
+
+    .diagram-box-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .diagram-box.secondary {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+    }
+
+    .diagram-box.secondary .diagram-box-label {
+      color: var(--text-light);
+    }
+
+    .diagram-box.secondary .diagram-box-name {
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .diagram-box.amber {
+      background: linear-gradient(135deg, #D97706, var(--amber));
+    }
+
+    .diagram-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 0 8px;
+    }
+
+    .diagram-arrow-line {
+      height: 2px;
+      width: 48px;
+      background: var(--border);
+      position: relative;
+    }
+
+    .diagram-arrow-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--text-light);
+      text-align: center;
+      max-width: 72px;
+      line-height: 1.3;
+    }
+
+    .diagram-arrow-sym {
+      font-size: 1.1rem;
+      color: var(--teal);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .diagram-spoke-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .diagram-spoke {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+    }
+
+    .diagram-spoke-line {
+      width: 2px;
+      height: 28px;
+      background: var(--border);
+    }
+
+    .diagram-spoke-box {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      min-width: 120px;
+      text-align: center;
+    }
+
+    .diagram-spoke-icon {
+      font-size: 1.3rem;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .diagram-spoke-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .diagram-spoke-sub {
+      font-size: 0.7rem;
+      color: var(--text-light);
+    }
+
+    .integration-flows {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 28px;
+    }
+
+    .flow-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+
+    .flow-item h4 {
+      font-size: 0.85rem;
+      color: var(--teal-dark);
+      margin-bottom: 6px;
+    }
+
+    .flow-item p {
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .ehr-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .ehr-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1.5px solid var(--teal-light);
+      border-radius: 8px;
+      padding: 10px 16px;
+    }
+
+    .ehr-badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--teal);
+    }
+
+    .ehr-badge span {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--teal-dark);
+    }
+
+    .ehr-badge small {
+      font-size: 0.72rem;
+      color: var(--text-light);
+      font-weight: 400;
+    }
+
+    .integration-cta {
+      background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-top: 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .integration-cta-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .integration-cta p {
+      color: rgba(255,255,255,0.9);
+      font-size: 1rem;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    .integration-cta strong {
+      color: var(--amber);
+    }
+
+    /* ============================================================
+       PRICING SECTION
+    ============================================================ */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .pricing-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px var(--teal-light);
+    }
+
+    .pricing-header {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pricing-tier {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-bottom: 6px;
+    }
+
+    .pricing-card.featured .pricing-tier {
+      color: var(--teal);
+    }
+
+    .pricing-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .pricing-price {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .pricing-amount {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    .pricing-card.featured .pricing-amount {
+      color: var(--teal-dark);
+    }
+
+    .pricing-period {
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    .pricing-desc {
+      font-size: 0.82rem;
+      color: var(--text-mid);
+      line-height: 1.5;
+    }
+
+    .pricing-features {
+      padding: 20px 24px;
+      flex-grow: 1;
+    }
+
+    .pricing-features ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pricing-features li {
+      font-size: 0.85rem;
+      color: var(--text-mid);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.4;
+    }
+
+    .pricing-check {
+      color: var(--teal);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .pricing-badge {
+      background: var(--teal);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .partnership-section {
+      background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+      border: 1.5px solid #FDE68A;
+      border-radius: 16px;
+      padding: 36px;
+    }
+
+    .partnership-section h3 {
+      font-size: 1.25rem;
+      color: var(--amber-dark);
+      margin-bottom: 8px;
+    }
+
+    .partnership-section > p {
+      margin-bottom: 24px;
+    }
+
+    .partnership-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .partnership-item {
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+
+    .partnership-item h4 {
+      font-size: 0.9rem;
+      color: var(--amber-dark);
+      margin-bottom: 5px;
+    }
+
+    .partnership-item p {
+      font-size: 0.82rem;
+    }
+
+    /* ============================================================
+       ROADMAP SECTION
+    ============================================================ */
+    #roadmap {
+      background: var(--surface);
+    }
+
+    .roadmap-timeline {
+      position: relative;
+      padding-left: 32px;
+      margin-top: 12px;
+    }
+
+    .roadmap-timeline::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, var(--teal), var(--teal-mid), var(--amber), var(--border), var(--border));
+    }
+
+    .roadmap-item {
+      position: relative;
+      padding: 0 0 36px 32px;
+    }
+
+    .roadmap-item:last-child {
+      padding-bottom: 0;
+    }
+
+    .roadmap-dot {
+      position: absolute;
+      left: -32px;
+      top: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--teal);
+      border: 3px solid var(--surface);
+      box-shadow: 0 0 0 2px var(--teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      color: white;
+      font-weight: 800;
+    }
+
+    .roadmap-item.complete .roadmap-dot {
+      background: var(--teal-dark);
+    }
+
+    .roadmap-item.upcoming .roadmap-dot {
+      background: var(--amber);
+      box-shadow: 0 0 0 2px var(--amber);
+    }
+
+    .roadmap-item.future .roadmap-dot {
+      background: var(--border);
+      box-shadow: 0 0 0 2px var(--border);
+    }
+
+    .roadmap-phase-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-bottom: 3px;
+    }
+
+    .roadmap-item.complete .roadmap-phase-label {
+      color: var(--teal);
+    }
+
+    .roadmap-item.upcoming .roadmap-phase-label {
+      color: var(--amber-dark);
+    }
+
+    .roadmap-item h3 {
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .roadmap-status {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 100px;
+      letter-spacing: 0.05em;
+    }
+
+    .status-complete {
+      background: var(--teal-light);
+      color: var(--teal-dark);
+    }
+
+    .status-upcoming {
+      background: var(--amber-light);
+      color: var(--amber-dark);
+    }
+
+    .status-future {
+      background: #F1F5F9;
+      color: var(--text-light);
+    }
+
+    .roadmap-item p {
+      font-size: 0.88rem;
+    }
+
+    .roadmap-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .roadmap-tag {
+      background: #F1F5F9;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      color: var(--text-mid);
+      font-weight: 500;
+    }
+
+    .roadmap-item.complete .roadmap-tag {
+      background: var(--teal-light);
+      border-color: #99F6E4;
+      color: var(--teal-dark);
+    }
+
+    .roadmap-item.upcoming .roadmap-tag {
+      background: var(--amber-light);
+      border-color: #FDE68A;
+      color: var(--amber-dark);
+    }
+
+    /* ============================================================
+       WHY ACTIVITYPRO
+    ============================================================ */
+    .why-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 8px;
+    }
+
+    .why-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+    }
+
+    .why-icon {
+      font-size: 1.75rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .why-card h3 {
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .why-card p {
+      font-size: 0.87rem;
+      line-height: 1.65;
+    }
+
+    .contact-block {
+      background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+      border-radius: 16px;
+      padding: 40px;
+      margin-top: 36px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .contact-block::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+    }
+
+    .contact-block h3 {
+      font-family: 'Playfair Display', serif;
+      color: white;
+      font-size: 1.6rem;
+      margin-bottom: 10px;
+    }
+
+    .contact-block p {
+      color: rgba(255,255,255,0.75);
+      font-size: 1rem;
+      max-width: 480px;
+      margin: 0 auto 24px;
+    }
+
+    .contact-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--amber);
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 12px 28px;
+      border-radius: 100px;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      background: var(--text);
+      padding: 32px;
+      text-align: center;
+    }
+
+    footer p {
+      color: rgba(255,255,255,0.35);
+      font-size: 0.78rem;
+    }
+
+    footer strong {
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* ============================================================
+       PRINT / PDF STYLES
+    ============================================================ */
+    @media print {
+      body { background: white; }
+
+      #cover {
+        page-break-after: always;
+        min-height: 100vh;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      section {
+        page-break-inside: avoid;
+        padding: 40px 0;
+      }
+
+      .problem-grid,
+      .feature-pillars,
+      .features-grid,
+      .pricing-grid,
+      .why-grid,
+      .integration-flows,
+      .partnership-grid {
+        page-break-inside: avoid;
+      }
+
+      .page-break-before {
+        page-break-before: always;
+      }
+
+      .contact-block,
+      .integration-diagram,
+      .solution-statement,
+      .partnership-section {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .pricing-card.featured {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      footer { display: none; }
+    }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 720px) {
+      h1 { font-size: 2.5rem; }
+      .cover-logo { font-size: 3.5rem; }
+      .problem-grid,
+      .feature-pillars,
+      .features-grid,
+      .pricing-grid,
+      .why-grid,
+      .integration-flows,
+      .partnership-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       1. COVER PAGE
+  ============================================================ -->
+  <section id="cover">
+    <div class="cover-inner">
+      <div class="cover-badge">
+        <span class="cover-badge-dot"></span>
+        Senior Living Technology
+      </div>
+
+      <div class="cover-logo">Activity<span>Pro</span></div>
+      <div class="cover-tagline">AI-Powered Activity Management for Senior Living</div>
+      <div class="cover-divider"></div>
+      <div class="cover-subtitle">Confidential &mdash; Product Overview &amp; Integration Proposal</div>
+
+      <div class="cover-meta">
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">Prepared</span>
+          <span class="cover-meta-value">May 2026</span>
+        </div>
+        <div class="cover-meta-sep"></div>
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">Contact</span>
+          <span class="cover-meta-value">kyl3rking@gmail.com</span>
+        </div>
+        <div class="cover-meta-sep"></div>
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">Version</span>
+          <span class="cover-meta-value">Phase 3 &mdash; Production</span>
+        </div>
+        <div class="cover-meta-sep"></div>
+        <div class="cover-meta-item">
+          <span class="cover-meta-label">Classification</span>
+          <span class="cover-meta-value">Confidential</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       2. THE PROBLEM
+  ============================================================ -->
+  <section id="problem">
+    <div class="page">
+      <div class="section-header">
+        <div class="section-label">The Challenge</div>
+        <h2>Activity Directors Are Overwhelmed — and Residents Pay the Price</h2>
+        <p>Senior living activity programs are vital to resident wellbeing, but the people running them are buried in administrative work, fragmented tools, and manual processes that would be unrecognizable in any other healthcare setting.</p>
+      </div>
+      <div class="accent-bar"></div>
+
+      <div class="problem-intro">
+        <p>Activity directors in skilled nursing, assisted living, and memory care facilities carry enormous responsibility: planning meaningful programming for dozens of residents with complex needs, tracking participation for regulatory compliance, communicating with families, and maintaining clinical documentation &mdash; all with tools that were designed for a different era.</p>
+      </div>
+
+      <div class="problem-grid">
+        <div class="problem-card">
+          <span class="problem-stat">40%+</span>
+          <h3>Time Lost to Paperwork</h3>
+          <p>Activity directors spend nearly half their working hours on administrative tasks &mdash; scheduling, documentation, and compliance reporting &mdash; instead of spending that time with the residents they serve. Every hour on paperwork is an hour away from the floor.</p>
+        </div>
+
+        <div class="problem-card">
+          <span class="problem-icon">📋</span>
+          <h3>No Unified Toolset</h3>
+          <p>Most facilities piece together calendars in Excel, session notes on paper forms, family communication through personal email, and compliance records in binders. There is no single system of record. Information lives everywhere, which means it is effectively accessible nowhere.</p>
+        </div>
+
+        <div class="problem-card">
+          <span class="problem-icon">⚠️</span>
+          <h3>Compliance Is a Manual Risk</h3>
+          <p>Regulatory bodies require documented evidence of participation, individualized programming, and resident engagement. These reports are assembled by hand, often at survey time, from whatever paper records survived the quarter. Inconsistency is inevitable &mdash; and inspections are unforgiving.</p>
+        </div>
+
+        <div class="problem-card">
+          <span class="problem-icon">🚪</span>
+          <h3>Knowledge Walks Out the Door</h3>
+          <p>Senior living has among the highest staff turnover rates in healthcare. When an experienced activity director leaves, they take everything with them: which residents respond to music therapy, who tends to decline in winter, which activities drive the highest engagement. There is no institutional memory.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       3. THE SOLUTION
+  ============================================================ -->
+  <section id="solution">
+    <div class="page">
+      <div class="section-header">
+        <div class="section-label">The Solution</div>
+        <h2>One Platform. Every Tool an Activity Director Needs.</h2>
+        <p>ActivityPro replaces the patchwork of spreadsheets, paper notes, and manual processes with a single, intelligent platform purpose-built for senior living activity departments.</p>
+      </div>
+      <div class="accent-bar"></div>
+
+      <div class="solution-statement">
+        <p>ActivityPro is a <strong>browser-based, AI-powered activity management platform</strong> that gives senior living activity directors the tools to plan smarter, document faster, communicate better, and demonstrate the clinical value of their programming &mdash; without adding more work to their day.</p>
+      </div>
+
+      <div class="feature-pillars">
+        <div class="pillar-card">
+          <span class="pillar-icon">🧠</span>
+          <h3>Smart Planning</h3>
+          <ul class="pillar-features">
+            <li>AI Activity Generator (full-week plans in seconds)</li>
+            <li>Smart Daily Briefing (at-risk alerts, today's schedule)</li>
+            <li>Session Pre-Brief (per-resident disability reminders)</li>
+            <li>Activity Library with customizable templates</li>
+            <li>Drag-and-drop calendar interface</li>
+          </ul>
+        </div>
+
+        <div class="pillar-card">
+          <span class="pillar-icon">👥</span>
+          <h3>Resident Intelligence</h3>
+          <ul class="pillar-features">
+            <li>Resident Quick Cards (19 disability types tracked)</li>
+            <li>Before/after mood tracking per session</li>
+            <li>Engagement rate &amp; days-since-last-activity</li>
+            <li>At-risk alerts for declining engagement</li>
+            <li>Full participation history per resident</li>
+          </ul>
+        </div>
+
+        <div class="pillar-card">
+          <span class="pillar-icon">📊</span>
+          <h3>Communication &amp; Compliance</h3>
+          <ul class="pillar-features">
+            <li>One-button AI-written family updates</li>
+            <li>Clinical PDF reports (care plan-ready)</li>
+            <li>Photo documentation per session</li>
+            <li>Director &amp; floor staff role system</li>
+            <li>Audit trail for every documented action</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       4. KEY FEATURES
+  ============================================================ -->
+  <section id="features">
+    <div class="page">
+      <div class="section-header">
+        <div class="section-label">Key Features</div>
+        <h2>Designed for the Realities of Senior Living</h2>
+        <p>Every feature in ActivityPro was built to solve a specific, recurring pain point that activity directors face. No bloat, no generic SaaS tooling &mdash; every screen earns its place.</p>
+      </div>
+      <div class="accent-bar"></div>
+
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🤖</span>
+          <h4>AI Activity Generator</h4>
+          <p>Powered by Anthropic's Claude AI, the generator produces a full week of personalized, disability-aware activities in seconds. It considers your resident population's mobility limitations, cognitive levels, sensory needs, and documented preferences to create programming that is both engaging and clinically appropriate.</p>
+          <div class="feature-benefit">Key benefit: Hours of planning reduced to a single click</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🌅</span>
+          <h4>Smart Daily Briefing</h4>
+          <p>Every morning, ActivityPro surfaces an AI-synthesized briefing for the shift: residents with declining mood trends, anyone who has not attended an activity in 5+ days, today's sessions and expected attendees, and any flags requiring director attention. Staff arrive informed, not scrambling.</p>
+          <div class="feature-benefit">Key benefit: Critical resident changes surface automatically</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📋</span>
+          <h4>Session Pre-Brief</h4>
+          <p>Before any activity begins, staff can pull up a pre-brief for that specific session: every attending resident's relevant disabilities and accommodations, their mood trend over the past two weeks, and their full history with this particular activity type. Preparation that used to take 30 minutes takes 30 seconds.</p>
+          <div class="feature-benefit">Key benefit: Staff arrive prepared for each resident's individual needs</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🃏</span>
+          <h4>Resident Quick Cards</h4>
+          <p>A compact, scannable profile for every resident: 19 standardized disability types (mobility, vision, hearing, cognitive, behavioral, and more), engagement rate over the trailing 30 days, time since last documented activity, and current mood baseline. Built for fast reference during handoff or pre-session review.</p>
+          <div class="feature-benefit">Key benefit: Any staff member can understand any resident in under 60 seconds</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">✉️</span>
+          <h4>One-Button Family Updates</h4>
+          <p>ActivityPro drafts a personalized, warm, professionally written family update email using AI, pulling from the resident's recent sessions, mood data, and participation highlights. The director reviews and sends with a single click. No more composing individual emails or templating by hand.</p>
+          <div class="feature-benefit">Key benefit: Family communication that used to take an hour takes minutes</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📈</span>
+          <h4>Mood &amp; Engagement Analytics</h4>
+          <p>Before-and-after mood tracking for every session reveals which activities consistently lift resident wellbeing and which fall flat. Trend charts show individual and cohort-level mood over time. A day-of-week heatmap identifies when engagement peaks and when programming should be adjusted.</p>
+          <div class="feature-benefit">Key benefit: Data that demonstrates clinical value to surveyors and families</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📄</span>
+          <h4>Clinical PDF Reports</h4>
+          <p>Generate care plan-ready documentation with a single click: participation summaries, mood trend reports, engagement analytics, and individualized resident activity histories. These are true PDF downloads, formatted for clinical binders and compliant with standard documentation requirements.</p>
+          <div class="feature-benefit">Key benefit: Survey-ready documentation without manual assembly</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📷</span>
+          <h4>Photo Documentation</h4>
+          <p>Attach photos to any session record to build a visual participation history. Photos are stored securely, linked to the session and attending residents, and can be included in family updates or printed in reports. A picture of a resident engaged in an activity is worth more than any checkbox.</p>
+          <div class="feature-benefit">Key benefit: Visual evidence of engagement for families and compliance</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🔐</span>
+          <h4>Staff Logins &amp; Roles</h4>
+          <p>A two-tier role system distinguishes between directors (full access, including analytics, reports, and settings) and floor staff (session documentation and resident lookup). Every action is timestamped and attributed, creating an audit trail that demonstrates accountability and supports accreditation reviews.</p>
+          <div class="feature-benefit">Key benefit: Appropriate access controls with full accountability</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       5. INTEGRATION ARCHITECTURE
+  ============================================================ -->
+  <section id="integration">
+    <div class="page">
+      <div class="section-header">
+        <div class="section-label">Integration Architecture</div>
+        <h2>Built to Connect with Your Existing Systems</h2>
+        <p>ActivityPro is not an island. It is designed from the ground up to integrate with EHR platforms, email infrastructure, and AI services &mdash; so it fits into your technology ecosystem rather than replacing it.</p>
+      </div>
+      <div class="accent-bar"></div>
+
+      <div class="integration-diagram">
+        <div class="integration-diagram-title">ActivityPro Integration Ecosystem</div>
+
+        <!-- Top row: EHR ←→ ActivityPro ←→ Claude AI -->
+        <div class="diagram-center-row">
+          <div class="diagram-box secondary">
+            <div class="diagram-box-label">EHR Systems</div>
+            <div class="diagram-box-name">PointClickCare<br><small style="font-size:0.75rem;color:#94A3B8;">MatrixCare</small></div>
+          </div>
+
+          <div class="diagram-arrow">
+            <div class="diagram-arrow-sym">⟷</div>
+            <div class="diagram-arrow-label">Resident demographics &amp; sync</div>
+          </div>
+
+          <div class="diagram-box">
+            <div class="diagram-box-label">Platform</div>
+            <div class="diagram-box-name">ActivityPro</div>
+          </div>
+
+          <div class="diagram-arrow">
+            <div class="diagram-arrow-sym">⟷</div>
+            <div class="diagram-arrow-label">AI generation &amp; summarization</div>
+          </div>
+
+          <div class="diagram-box amber">
+            <div class="diagram-box-label">AI Engine</div>
+            <div class="diagram-box-name">Claude AI<br><small style="font-size:0.75rem;color:rgba(255,255,255,0.7);">Anthropic</small></div>
+          </div>
+        </div>
+
+        <!-- Bottom spokes -->
+        <div style="display:flex;justify-content:center;margin-bottom:12px;">
+          <div style="width:2px;height:28px;background:var(--border);"></div>
+        </div>
+
+        <div class="diagram-spoke-row">
+          <div class="diagram-spoke">
+            <div class="diagram-spoke-box">
+              <span class="diagram-spoke-icon">✉️</span>
+              <div class="diagram-spoke-name">SMTP Email</div>
+              <div class="diagram-spoke-sub">Family updates</div>
+            </div>
+          </div>
+
+          <div class="diagram-spoke">
+            <div class="diagram-spoke-box">
+              <span class="diagram-spoke-icon">📄</span>
+              <div class="diagram-spoke-name">PDF Export</div>
+              <div class="diagram-spoke-sub">Clinical docs</div>
+            </div>
+          </div>
+
+          <div class="diagram-spoke">
+            <div class="diagram-spoke-box">
+              <span class="diagram-spoke-icon">📷</span>
+              <div class="diagram-spoke-name">Photo Storage</div>
+              <div class="diagram-spoke-sub">Session records</div>
+            </div>
+          </div>
+
+          <div class="diagram-spoke">
+            <div class="diagram-spoke-box">
+              <span class="diagram-spoke-icon">🔒</span>
+              <div class="diagram-spoke-name">Auth &amp; Roles</div>
+              <div class="diagram-spoke-sub">Staff access control</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom:16px;font-size:1rem;">Current EHR Integration Framework</h3>
+      <div class="ehr-badges">
+        <div class="ehr-badge">
+          <div class="ehr-badge-dot"></div>
+          <div>
+            <span>PointClickCare</span>
+            <small style="display:block;">OAuth2 authentication framework</small>
+          </div>
+        </div>
+        <div class="ehr-badge">
+          <div class="ehr-badge-dot"></div>
+          <div>
+            <span>MatrixCare</span>
+            <small style="display:block;">API key integration framework</small>
+          </div>
+        </div>
+        <div class="ehr-badge" style="border-color:var(--border);">
+          <div class="ehr-badge-dot" style="background:var(--amber);"></div>
+          <div>
+            <span style="color:var(--amber-dark);">Additional EHRs</span>
+            <small style="display:block;">Available on request</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="integration-flows" style="margin-top:28px;">
+        <div class="flow-item">
+          <h4>→ Resident Import</h4>
+          <p>Pull resident demographics, diagnoses, and care plan data directly from your EHR on a scheduled or on-demand basis. Eliminates duplicate data entry and ensures ActivityPro stays in sync with clinical records.</p>
+        </div>
+        <div class="flow-item">
+          <h4>→ Activity Note Export</h4>
+          <p>Session notes and participation records can be pushed back to the EHR as clinical documentation, keeping the resident's full care record in one place and satisfying documentation requirements across both systems.</p>
+        </div>
+        <div class="flow-item">
+          <h4>→ Demographic Sync</h4>
+          <p>New admissions, discharges, and room changes in the EHR are reflected in ActivityPro automatically. No manual updates, no stale rosters, no risk of documenting activity for the wrong resident.</p>
+        </div>
+      </div>
+
+      <div class="integration-cta">
+        <div class="integration-cta-icon">⚡</div>
+        <p><strong>Integration-ready:</strong> Connect ActivityPro to your existing EHR in days, not months. Our integration framework uses standard OAuth2 and REST API patterns supported by every major senior living EHR. No custom middleware required.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       6. BUSINESS MODEL & LICENSING
+  ============================================================ -->
+  <section id="pricing">
+    <div class="page">
+      <div class="section-header">
+        <div class="section-label">Business Model</div>
+        <h2>Flexible Licensing for Every Organization</h2>
+        <p>Whether you are an independent facility exploring ActivityPro for the first time or a multi-facility organization seeking a white-label enterprise solution, there is a licensing path designed for you.</p>
+      </div>
+      <div class="accent-bar"></div>
+
+      <div class="pricing-grid">
+
+        <div class="pricing-card">
+          <div class="pricing-header">
+            <div class="pricing-tier">Starter</div>
+            <div class="pricing-name">Free</div>
+            <div class="pricing-price">
+              <span class="pricing-amount">$0</span>
+              <span class="pricing-period">/ month</span>
+            </div>
+            <div class="pricing-desc">For smaller programs exploring a better way to manage activities. No credit card required, no time limit.</div>
+          </div>
+          <div class="pricing-features">
+            <ul>
+              <li><span class="pricing-check">✓</span> Up to 15 resident profiles</li>
+              <li><span class="pricing-check">✓</span> Activity calendar &amp; scheduling</li>
+              <li><span class="pricing-check">✓</span> Resident profiles &amp; disability tracking</li>
+              <li><span class="pricing-check">✓</span> Session documentation &amp; attendance</li>
+              <li><span class="pricing-check">✓</span> Basic mood tracking</li>
+              <li><span class="pricing-check" style="color:var(--text-light);">—</span> <span style="color:var(--text-light);">AI activity generator</span></li>
+              <li><span class="pricing-check" style="color:var(--text-light);">—</span> <span style="color:var(--text-light);">Analytics &amp; reporting</span></li>
+              <li><span class="pricing-check" style="color:var(--text-light);">—</span> <span style="color:var(--text-light);">PDF clinical reports</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="pricing-card featured">
+          <div class="pricing-header">
+            <div class="pricing-badge">Most Popular</div>
+            <div class="pricing-tier">Professional</div>
+            <div class="pricing-name">Pro</div>
+            <div class="pricing-price">
+              <span class="pricing-amount">$29</span>
+              <span class="pricing-period">/ month per facility</span>
+            </div>
+            <div class="pricing-desc">The complete ActivityPro experience for a single facility. Everything you need to run a best-in-class activity program.</div>
+          </div>
+          <div class="pricing-features">
+            <ul>
+              <li><span class="pricing-check">✓</span> Unlimited resident profiles</li>
+              <li><span class="pricing-check">✓</span> AI Activity Generator (Claude AI)</li>
+              <li><span class="pricing-check">✓</span> Smart Daily Briefing &amp; Pre-Briefs</li>
+              <li><span class="pricing-check">✓</span> Resident Quick Cards &amp; at-risk alerts</li>
+              <li><span class="pricing-check">✓</span> One-button family update emails</li>
+              <li><span class="pricing-check">✓</span> Full mood &amp; engagement analytics</li>
+              <li><span class="pricing-check">✓</span> Clinical PDF reports</li>
+              <li><span class="pricing-check">✓</span> Photo documentation</li>
+              <li><span class="pricing-check">✓</span> Staff logins &amp; role management</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="pricing-card">
+          <div class="pricing-header">
+            <div class="pricing-tier">Enterprise</div>
+            <div class="pricing-name">Enterprise</div>
+            <div class="pricing-price">
+              <span class="pricing-amount">$79</span>
+              <span class="pricing-period">/ month per facility</span>
+            </div>
+            <div class="pricing-desc">For multi-facility organizations that need EHR integration, advanced compliance tools, and enterprise-grade support.</div>
+          </div>
+          <div class="pricing-features">
+            <ul>
+              <li><span class="pricing-check">✓</span> Everything in Pro</li>
+              <li><span class="pricing-check">✓</span> Multi-facility dashboard</li>
+              <li><span class="pricing-check">✓</span> EHR integration (PointClickCare, MatrixCare)</li>
+              <li><span class="pricing-check">✓</span> HIPAA-compliant cloud backup</li>
+              <li><span class="pricing-check">✓</span> API access for custom integrations</li>
+              <li><span class="pricing-check">✓</span> White-label branding option</li>
+              <li><span class="pricing-check">✓</span> Priority feature development</li>
+              <li><span class="pricing-check">✓</span> Dedicated onboarding support</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="partnership-section">
+        <h3>Partnership &amp; Royalty Model</h3>
+        <p>ActivityPro is available for white-label licensing, revenue-share arrangements, and enterprise API embedding. We are actively seeking long-term partners in senior living ownership groups, management companies, and healthcare technology platforms.</p>
+        <div class="partnership-grid">
+          <div class="partnership-item">
+            <h4>White-Label Licensing</h4>
+            <p>ActivityPro can be fully rebranded for your organization &mdash; your logo, your colors, your domain. Offered as a flat monthly royalty per active facility, with no per-seat fees or usage caps.</p>
+          </div>
+          <div class="partnership-item">
+            <h4>Revenue Share</h4>
+            <p>For distribution partners who want to resell ActivityPro as part of their platform or managed services offering, we offer a negotiated revenue-share arrangement on new facility subscriptions.</p>
+          </div>
+          <div class="partnership-item">
+            <h4>Enterprise API</h4>
+            <p>Embed specific ActivityPro capabilities &mdash; AI activity generation, mood analytics, family communication &mdash; directly into your existing platform via a documented REST API. No full application required.</p>
+          </div>
+          <div class="partnership-item">
+            <h4>Custom Development</h4>
+            <p>Enterprise partners can request features and integrations prioritized in the development roadmap. If a capability would serve your residents and your organization, it belongs in the platform.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       7. ROADMAP
+  ============================================================ -->
+  <section id="roadmap">
+    <div class="page">
+      <div class="section-header">
+        <div class="section-label">Product Roadmap</div>
+        <h2>Where We Are and Where We Are Going</h2>
+        <p>ActivityPro has moved through three shipping phases in rapid succession. The foundation is production-ready today; the roadmap ahead is focused on mobile reach, deeper EHR integration, and regulatory compliance automation.</p>
+      </div>
+      <div class="accent-bar"></div>
+
+      <div class="roadmap-timeline">
+
+        <div class="roadmap-item complete">
+          <div class="roadmap-dot">&#10003;</div>
+          <div class="roadmap-phase-label">Phase 1 &mdash; Complete</div>
+          <h3>Core Platform <span class="roadmap-status status-complete">Shipped</span></h3>
+          <p>The foundational layer: a working activity management system that replaced spreadsheets and paper for real facilities.</p>
+          <div class="roadmap-tags">
+            <span class="roadmap-tag">Activity Calendar</span>
+            <span class="roadmap-tag">Resident Profiles</span>
+            <span class="roadmap-tag">Activity Library</span>
+            <span class="roadmap-tag">Engagement Tracking</span>
+            <span class="roadmap-tag">Session Documentation</span>
+          </div>
+        </div>
+
+        <div class="roadmap-item complete">
+          <div class="roadmap-dot">&#10003;</div>
+          <div class="roadmap-phase-label">Phase 2 &mdash; Complete</div>
+          <h3>Clinical Depth <span class="roadmap-status status-complete">Shipped</span></h3>
+          <p>Clinical-grade documentation, visual data, and multi-user support transformed ActivityPro from a scheduling tool into a care documentation platform.</p>
+          <div class="roadmap-tags">
+            <span class="roadmap-tag">Staff Roles &amp; Logins</span>
+            <span class="roadmap-tag">Mood Analytics</span>
+            <span class="roadmap-tag">Photo Documentation</span>
+            <span class="roadmap-tag">Clinical PDF Reports</span>
+            <span class="roadmap-tag">EHR Integration Framework</span>
+          </div>
+        </div>
+
+        <div class="roadmap-item complete">
+          <div class="roadmap-dot">&#10003;</div>
+          <div class="roadmap-phase-label">Phase 3 &mdash; Complete</div>
+          <h3>AI Intelligence Layer <span class="roadmap-status status-complete">Shipped</span></h3>
+          <p>The integration of Claude AI across the platform &mdash; from activity generation to family communication &mdash; makes ActivityPro the first truly AI-native activity management platform in senior living.</p>
+          <div class="roadmap-tags">
+            <span class="roadmap-tag">AI Activity Generator</span>
+            <span class="roadmap-tag">Smart Daily Briefing</span>
+            <span class="roadmap-tag">Resident Quick Cards</span>
+            <span class="roadmap-tag">Session Pre-Brief</span>
+            <span class="roadmap-tag">Family Update Emails</span>
+          </div>
+        </div>
+
+        <div class="roadmap-item upcoming">
+          <div class="roadmap-dot">4</div>
+          <div class="roadmap-phase-label">Phase 4 &mdash; Q3 2026</div>
+          <h3>Mobile &amp; Real-Time <span class="roadmap-status status-upcoming">In Development</span></h3>
+          <p>Bringing ActivityPro to the floor in real time: native mobile apps for iOS and Android, voice-driven session logging for hands-free documentation, and real-time bidirectional EHR synchronization.</p>
+          <div class="roadmap-tags">
+            <span class="roadmap-tag">iOS App</span>
+            <span class="roadmap-tag">Android App</span>
+            <span class="roadmap-tag">Voice Logging</span>
+            <span class="roadmap-tag">Real-Time EHR Sync</span>
+            <span class="roadmap-tag">Offline Mode</span>
+          </div>
+        </div>
+
+        <div class="roadmap-item future">
+          <div class="roadmap-dot">5</div>
+          <div class="roadmap-phase-label">Phase 5 &mdash; Q4 2026</div>
+          <h3>Enterprise Scale <span class="roadmap-status status-future">Planned</span></h3>
+          <p>Multi-facility governance, automated regulatory compliance reporting, and ambient computing integrations &mdash; laying the foundation for ActivityPro to operate at the scale of large ownership groups and regional operators.</p>
+          <div class="roadmap-tags">
+            <span class="roadmap-tag">Multi-Facility Dashboard</span>
+            <span class="roadmap-tag">Regulatory Compliance Module</span>
+            <span class="roadmap-tag">Alexa Integration</span>
+            <span class="roadmap-tag">Automated Survey Prep</span>
+            <span class="roadmap-tag">Benchmark Analytics</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       8. WHY ACTIVITYPRO
+  ============================================================ -->
+  <section id="why">
+    <div class="page">
+      <div class="section-header">
+        <div class="section-label">Why ActivityPro</div>
+        <h2>Built Different. Deployed Simply. Designed to Last.</h2>
+        <p>ActivityPro was not assembled from a startup template or designed to fit a generic healthcare market. It was built by someone who understands the problem, for teams who live with it every day.</p>
+      </div>
+      <div class="accent-bar"></div>
+
+      <div class="why-grid">
+
+        <div class="why-card">
+          <div class="why-icon">🎯</div>
+          <div>
+            <h3>Purpose-Built, Not Repurposed</h3>
+            <p>ActivityPro was designed specifically for senior living activity departments &mdash; not adapted from a generic task manager or repurposed from a different healthcare vertical. Every feature reflects real workflows, real regulatory requirements, and real staffing realities. There is no bloat and no features that do not belong.</p>
+          </div>
+        </div>
+
+        <div class="why-card">
+          <div class="why-icon">🌐</div>
+          <div>
+            <h3>Zero IT Infrastructure Required</h3>
+            <p>ActivityPro runs entirely in a web browser. There is no software to install, no server to maintain, no IT department required for deployment. A new facility can be fully operational in under an hour. For organizations with lean technology teams, this is not a convenience &mdash; it is the entire value proposition.</p>
+          </div>
+        </div>
+
+        <div class="why-card">
+          <div class="why-icon">🔒</div>
+          <div>
+            <h3>Privacy-First Architecture</h3>
+            <p>ActivityPro stores data in a local SQLite database by default, with an optional HIPAA-compliant cloud deployment for enterprise customers. Resident data is never sold, never shared with third parties, never used for model training. You control your data. That is not a marketing claim &mdash; it is an architectural guarantee.</p>
+          </div>
+        </div>
+
+        <div class="why-card">
+          <div class="why-icon">🔗</div>
+          <div>
+            <h3>Open to Partnership</h3>
+            <p>ActivityPro is not a closed ecosystem. It is built to integrate, white-label, and extend. Whether you want to embed specific capabilities via API, co-brand the platform for your network of facilities, or shape the roadmap through an enterprise partnership, there is a commercial arrangement that works. We are early, and that is an advantage for partners who move now.</p>
+          </div>
+        </div>
+
+        <div class="why-card">
+          <div class="why-icon">🚀</div>
+          <div>
+            <h3>Three Shipping Phases, Zero Vaporware</h3>
+            <p>The features described in this document are not roadmap promises &mdash; they are production code that is running today. ActivityPro has shipped three major phases without outside funding, venture debt, or a large team. What you see is what exists. The roadmap is ambitious because the foundation is already built.</p>
+          </div>
+        </div>
+
+        <div class="why-card">
+          <div class="why-icon">📐</div>
+          <div>
+            <h3>Extensible by Design</h3>
+            <p>ActivityPro is built on a clean, modular architecture that makes adding capabilities straightforward. New activity types, additional EHR connectors, regulatory reporting formats, and custom analytics are engineering iterations, not rewrites. The platform was designed to grow with your requirements rather than constrain them.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="contact-block">
+        <h3>Let's Build Something Together</h3>
+        <p>Whether you are exploring ActivityPro for a single facility or evaluating it as a platform for your entire portfolio, the conversation starts with one email.</p>
+        <a class="contact-email" href="mailto:kyl3rking@gmail.com">
+          ✉ &nbsp; kyl3rking@gmail.com
+        </a>
+        <p style="margin-top:20px;margin-bottom:0;font-size:0.82rem;color:rgba(255,255,255,0.45);">
+          All inquiries are responded to within 24 hours. &nbsp;|&nbsp; Enterprise demos available by appointment.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer>
+    <p>
+      <strong>ActivityPro</strong> &mdash; AI-Powered Activity Management for Senior Living &nbsp;|&nbsp;
+      &copy; 2026 &nbsp;|&nbsp;
+      <strong>kyl3rking@gmail.com</strong> &nbsp;|&nbsp;
+      Confidential &amp; Proprietary &mdash; Not for distribution
+    </p>
+  </footer>
+
+</body>
+</html>
