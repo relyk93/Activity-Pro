@@ -1,163 +1,290 @@
 import streamlit as st
-from utils.database import get_residents, get_events, get_engagements
+from utils.database import (get_residents, get_events, get_engagements,
+                             get_at_risk_residents, get_declining_mood_residents,
+                             get_last_activity)
+from utils.auth import get_current_staff, is_director
 from datetime import date, timedelta
 
+MOOD_EMOJI = {1: "😔", 2: "😕", 3: "😐", 4: "🙂", 5: "😊"}
+MOBILITY_ICON = {"independent": "🟢", "cane": "🟡", "walker": "🟡", "wheelchair": "🔴"}
+
 def show():
-    st.markdown("# 🌸 ActivityPro Dashboard")
-    sub = st.session_state.get("subscription", "free")
+    staff = get_current_staff()
+    first_name = (staff.get("full_name") or "Director").split()[0]
     facility = st.session_state.get("facility_name", "My Facility")
-    st.markdown(f"<div style='color:#718096; margin-top:-10px; margin-bottom:24px; font-size:1rem;'>Welcome back — <strong>{facility}</strong> · {date.today().strftime('%A, %B %d, %Y')}</div>", unsafe_allow_html=True)
+    today = date.today()
+    today_str = str(today)
 
-    # Metrics row
-    residents = get_residents()
-    today_str = str(date.today())
-    week_end = str(date.today() + timedelta(days=7))
+    # Greeting based on time of day
+    hour = __import__('datetime').datetime.now().hour
+    greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
+
+    st.markdown(f"""
+    <div style='margin-bottom:24px;'>
+        <div style='font-family: Playfair Display, serif; font-size:1.8rem; font-weight:700; color:#1A2332;'>
+            {greeting}, {first_name}. 👋
+        </div>
+        <div style='color:#718096; font-size:0.95rem; margin-top:4px;'>
+            {today.strftime("%A, %B %d, %Y")} &nbsp;·&nbsp; {facility}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Data load ──
+    residents   = get_residents()
     today_events = get_events(date_from=today_str, date_to=today_str)
-    week_events = get_events(date_from=today_str, date_to=week_end)
+    week_events  = get_events(date_from=today_str, date_to=str(today + timedelta(days=6)))
+    all_eng      = get_engagements()
+    at_risk      = get_at_risk_residents(days_threshold=14)
+    declining    = get_declining_mood_residents()
 
+    engaged_count = sum(1 for e in all_eng if e['engaged'])
+    eng_rate = int(engaged_count / len(all_eng) * 100) if all_eng else 0
+
+    # ── Alert banner ──
+    alert_count = len(at_risk) + len(declining)
+    if alert_count > 0:
+        at_risk_names  = ", ".join(r['name'].split()[0] for r in at_risk[:3])
+        declining_names = ", ".join(r['name'].split()[0] for r in declining[:2])
+        parts = []
+        if at_risk:
+            extra = f" +{len(at_risk)-3} more" if len(at_risk) > 3 else ""
+            parts.append(f"**{len(at_risk)} residents** haven't engaged in 14+ days ({at_risk_names}{extra})")
+        if declining:
+            parts.append(f"**{len(declining)} residents** show declining mood ({declining_names})")
+        st.markdown(f"""
+        <div style='background:linear-gradient(135deg,#FBF0EA,#FEF5F0); border:1px solid #C47B5A;
+                    border-left:4px solid #C47B5A; border-radius:12px; padding:14px 20px; margin-bottom:20px;'>
+            <div style='font-weight:600; color:#7A3A1A; font-size:0.9rem; margin-bottom:4px;'>
+                ⚠️ Needs Attention Today
+            </div>
+            <div style='color:#5A2A0A; font-size:0.85rem;'>{"  ·  ".join(parts)}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── Metrics ──
     c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.markdown(f"""<div class='metric-box'>
-            <div class='metric-number'>{len(residents)}</div>
-            <div class='metric-label'>Active Residents</div>
-        </div>""", unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"""<div class='metric-box'>
-            <div class='metric-number'>{len(today_events)}</div>
-            <div class='metric-label'>Activities Today</div>
-        </div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""<div class='metric-box'>
-            <div class='metric-number'>{len(week_events)}</div>
-            <div class='metric-label'>This Week</div>
-        </div>""", unsafe_allow_html=True)
-    with c4:
-        # Calculate avg engagement
-        all_eng = get_engagements()
-        engaged = [e for e in all_eng if e['engaged']]
-        rate = int(len(engaged) / len(all_eng) * 100) if all_eng else 0
-        st.markdown(f"""<div class='metric-box'>
-            <div class='metric-number'>{rate}%</div>
-            <div class='metric-label'>Engagement Rate</div>
-        </div>""", unsafe_allow_html=True)
+    for col, num, label in [
+        (c1, len(residents),   "Active Residents"),
+        (c2, len(today_events),"Activities Today"),
+        (c3, len(week_events), "This Week"),
+        (c4, f"{eng_rate}%",   "Engagement Rate"),
+    ]:
+        with col:
+            st.markdown(f"""<div class='metric-box'>
+                <div class='metric-number'>{num}</div>
+                <div class='metric-label'>{label}</div>
+            </div>""", unsafe_allow_html=True)
 
     st.markdown("---")
+
     col_left, col_right = st.columns([3, 2])
 
+    # ════════════════════════════════════════
     with col_left:
-        st.markdown("### 📅 Today's Schedule")
+
+        # ── Today's activities ──
+        st.markdown("### 📅 Today's Activities")
         if today_events:
+            cat_class = {
+                "physical": "ap-card-sage", "mindful": "ap-card-lavender",
+                "social": "ap-card-sky",    "cognitive": "ap-card-terra",
+                "creative": "ap-card-terra",
+            }
             for ev in today_events:
                 cat = ev.get('category', 'social')
-                color_map = {
-                    "physical": "ap-card-sage",
-                    "mindful": "ap-card-lavender",
-                    "social": "ap-card-sky",
-                    "cognitive": "ap-card-terra",
-                    "creative": "ap-card-terra",
-                    "special_needs": "ap-card-lavender",
-                }
-                card_class = color_map.get(cat, "ap-card")
+                card = cat_class.get(cat, "ap-card")
                 group_badge = "🔵 All Residents" if ev['group_type'] == 'all' else "🟣 Special Needs"
                 st.markdown(f"""
-                <div class='ap-card {card_class}'>
+                <div class='ap-card {card}'>
                     <div style='display:flex; justify-content:space-between; align-items:flex-start;'>
                         <div>
                             <div style='font-weight:600; font-size:1.05rem; color:#1A2332;'>{ev['title']}</div>
-                            <div style='color:#718096; font-size:0.85rem; margin-top:4px;'>🕐 {ev.get('time','TBD')} &nbsp;|&nbsp; 📍 {ev.get('location','Activity Room')} &nbsp;|&nbsp; {group_badge}</div>
+                            <div style='color:#718096; font-size:0.85rem; margin-top:4px;'>
+                                🕐 {ev.get('time','TBD')} &nbsp;|&nbsp; 📍 {ev.get('location','Activity Room')} &nbsp;|&nbsp; {group_badge}
+                            </div>
                         </div>
                         <span class='tag tag-{cat}'>{cat.title()}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+                # Pre-Brief button
+                if st.button(f"📋 Pre-Brief for {ev['title'][:28]}...", key=f"brief_{ev['id']}",
+                             use_container_width=True):
+                    st.session_state.prebriefed_event_id = ev['id']
+                    st.session_state.page = "Pre-Brief"
+                    st.rerun()
         else:
             st.markdown("""
-            <div class='ap-card' style='text-align:center; padding:40px;'>
+            <div class='ap-card' style='text-align:center; padding:36px;'>
                 <div style='font-size:2rem;'>📭</div>
                 <div style='color:#718096; margin-top:8px;'>No activities scheduled for today.</div>
-                <div style='color:#A0AEC0; font-size:0.85rem;'>Use the AI Generator to create your week's calendar!</div>
+                <div style='color:#A0AEC0; font-size:0.85rem;'>Use the AI Generator to create a weekly calendar!</div>
             </div>
             """, unsafe_allow_html=True)
 
-        # Upcoming week preview
-        st.markdown("### 📆 This Week")
-        if week_events:
-            for ev in week_events:
-                ev_date = ev['date']
-                if ev_date == today_str:
+        # ── Needs Attention ──
+        if at_risk or declining:
+            st.markdown("### ⚠️ Needs Your Attention")
+            shown = set()
+            for r in (at_risk + declining):
+                if r['id'] in shown:
                     continue
-                day_label = date.fromisoformat(ev_date).strftime("%a %b %d")
+                shown.add(r['id'])
+                last = get_last_activity(r['id'])
+                last_str = f"Last seen: {last['event_date']} — {last['event_title']}" if last else "No activity on record"
+                reason = []
+                if r in at_risk:
+                    reason.append("No engagement in 14+ days")
+                if r in declining:
+                    reason.append("Declining mood trend")
+                icon = MOBILITY_ICON.get(r.get('mobility','independent'), '⚪')
                 st.markdown(f"""
-                <div style='padding:10px 16px; background:#FFFDF9; border-radius:10px; border:1px solid #E2DDD6; margin-bottom:8px; display:flex; justify-content:space-between;'>
-                    <span style='color:#4A5568;'><strong>{day_label}</strong> · {ev.get('time','TBD')} — {ev['title']}</span>
-                    <span class='tag tag-{ev.get("category","social")}'>{(ev.get("category","social")).title()}</span>
+                <div class='ap-card ap-card-terra' style='padding:14px 18px; margin-bottom:8px;'>
+                    <div style='display:flex; justify-content:space-between; align-items:center;'>
+                        <div>
+                            <strong style='font-size:1rem;'>{icon} {r['name']}</strong>
+                            <span style='color:#A0AEC0; font-size:0.8rem;'> · Rm {r.get('room','?')}</span><br>
+                            <span style='font-size:0.82rem; color:#C47B5A;'>{"  ·  ".join(reason)}</span><br>
+                            <span style='font-size:0.78rem; color:#A0AEC0;'>{last_str}</span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # ── This week ──
+        st.markdown("### 📆 Coming Up This Week")
+        upcoming = [ev for ev in week_events if ev['date'] != today_str]
+        if upcoming:
+            for ev in upcoming:
+                day_label = date.fromisoformat(ev['date']).strftime("%a %b %d")
+                cat = ev.get('category','social')
+                st.markdown(f"""
+                <div style='padding:10px 16px; background:#FFFDF9; border-radius:10px;
+                            border:1px solid #E2DDD6; margin-bottom:7px;
+                            display:flex; justify-content:space-between; align-items:center;'>
+                    <span style='color:#4A5568;'>
+                        <strong>{day_label}</strong> · {ev.get('time','TBD')} — {ev['title']}
+                    </span>
+                    <span class='tag tag-{cat}'>{cat.title()}</span>
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("No upcoming events this week. Generate a calendar to get started!")
+            st.info("No more events this week.")
 
+    # ════════════════════════════════════════
     with col_right:
+
+        # ── Birthdays ──
         st.markdown("### 🎂 Upcoming Birthdays")
-        today_d = date.today()
         birthday_list = []
         for r in residents:
             bday = r.get('birthday')
-            if bday:
-                try:
-                    bday_date = date.fromisoformat(bday)
-                    this_year = bday_date.replace(year=today_d.year)
-                    if this_year < today_d:
-                        this_year = this_year.replace(year=today_d.year + 1)
-                    days_away = (this_year - today_d).days
-                    if days_away <= 30:
-                        birthday_list.append((r['name'], this_year, days_away))
-                except:
-                    pass
+            if not bday:
+                continue
+            try:
+                bd = date.fromisoformat(bday)
+                this_year = bd.replace(year=today.year)
+                if this_year < today:
+                    this_year = this_year.replace(year=today.year + 1)
+                days_away = (this_year - today).days
+                if days_away <= 30:
+                    birthday_list.append((r['name'], this_year, days_away))
+            except Exception:
+                pass
         birthday_list.sort(key=lambda x: x[2])
 
         if birthday_list:
             for name, bday, days in birthday_list:
-                label = "🎉 TODAY!" if days == 0 else f"in {days} days"
+                label = "🎉 TODAY!" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
                 st.markdown(f"""
-                <div style='padding:10px 14px; background:#FFF8E8; border-radius:10px; border:1px solid #F0D090; margin-bottom:8px;'>
+                <div style='padding:10px 14px; background:#FFF8E8; border-radius:10px;
+                            border:1px solid #F0D090; margin-bottom:8px;'>
                     <strong style='color:#5A3A00;'>{name}</strong><br>
                     <span style='color:#8A6A20; font-size:0.85rem;'>🎂 {bday.strftime("%B %d")} — {label}</span>
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.markdown("<div style='color:#A0AEC0;'>No birthdays in the next 30 days.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='color:#A0AEC0; font-size:0.9rem;'>No birthdays in the next 30 days.</div>",
+                        unsafe_allow_html=True)
 
-        st.markdown("### 👥 Residents Quick View")
-        mobility_icons = {"independent": "🟢", "cane": "🟡", "walker": "🟡", "wheelchair": "🔴"}
-        for r in residents[:8]:
-            icon = mobility_icons.get(r.get('mobility', 'independent'), "⚪")
-            disab = r.get('disabilities', '')
-            disab_str = f" · {disab}" if disab else ""
-            st.markdown(f"""
-            <div style='padding:8px 14px; background:#FFFDF9; border-radius:8px; border:1px solid #E2DDD6; margin-bottom:6px;'>
-                <span style='font-weight:500; color:#1A2332;'>{icon} {r['name']}</span>
-                <span style='font-size:0.78rem; color:#A0AEC0;'> · Rm {r.get("room","?")} · Age {r.get("age","?")}{disab_str}</span>
-            </div>
-            """, unsafe_allow_html=True)
-        if len(residents) > 8:
-            st.caption(f"+ {len(residents)-8} more residents")
+        # ── Suggested activity ──
+        st.markdown("### 💡 Suggested for Today")
+        if residents and not today_events:
+            disability_pool = []
+            for r in residents:
+                disability_pool.extend((r.get('disabilities') or '').split(','))
+            disability_pool = [d.strip() for d in disability_pool if d.strip()]
+            most_common = max(set(disability_pool), key=disability_pool.count) if disability_pool else None
 
-        if sub in ("pro", "enterprise"):
-            st.markdown("### 📊 Engagement Snapshot")
-            categories = {}
-            all_eng = get_engagements()
-            for e in all_eng:
-                pass
-            category_data = {"Physical": 78, "Mindful": 85, "Social": 72, "Cognitive": 68, "Creative": 81}
-            for cat, pct in category_data.items():
-                bar_color = "#7C9A7E" if pct >= 75 else "#D4A843" if pct >= 60 else "#C47B5A"
+            from utils.database import get_activities
+            suggestions = get_activities()
+            if most_common:
+                best = [a for a in suggestions
+                        if most_common in (a.get('disability_friendly') or '')]
+                suggestions = best if best else suggestions
+
+            if suggestions:
+                pick = suggestions[0]
                 st.markdown(f"""
-                <div style='margin-bottom:10px;'>
-                    <div style='display:flex; justify-content:space-between; font-size:0.82rem; color:#4A5568; margin-bottom:3px;'>
-                        <span>{cat}</span><span>{pct}%</span>
+                <div class='ap-card ap-card-sage'>
+                    <div style='font-size:0.75rem; color:#4A6B4C; font-weight:600;
+                                text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;'>
+                        Based on your residents' profiles
                     </div>
-                    <div style='background:#E2DDD6; border-radius:6px; height:8px;'>
-                        <div style='background:{bar_color}; width:{pct}%; border-radius:6px; height:8px;'></div>
-                    </div>
+                    <strong style='font-size:1rem;'>{pick['title']}</strong><br>
+                    <span style='font-size:0.82rem; color:#718096;'>
+                        ⏱️ {pick.get('duration_minutes',60)} min &nbsp;·&nbsp;
+                        💰 {pick.get('cost_estimate','Free')} &nbsp;·&nbsp;
+                        <span class='tag tag-{pick.get("category","social")}'>{(pick.get("category","social")).title()}</span>
+                    </span><br>
+                    <span style='font-size:0.82rem; color:#4A5568; margin-top:6px; display:block;'>
+                        {(pick.get('description') or '')[:120]}...
+                    </span>
                 </div>
                 """, unsafe_allow_html=True)
+        elif today_events:
+            st.markdown("""
+            <div class='ap-card ap-card-sage'>
+                <div style='color:#4A6B4C; font-size:0.9rem;'>
+                    ✅ You're all set — activities are already scheduled for today!
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── Resident mood snapshot ──
+        st.markdown("### 💬 Resident Mood Snapshot")
+        st.markdown("<div style='font-size:0.8rem; color:#A0AEC0; margin-bottom:10px;'>Last recorded mood</div>",
+                    unsafe_allow_html=True)
+        shown_any = False
+        for r in residents[:10]:
+            last = get_last_activity(r['id'])
+            if last and last.get('mood_after'):
+                mood = last['mood_after']
+                emoji = MOOD_EMOJI.get(mood, "😐")
+                icon = MOBILITY_ICON.get(r.get('mobility','independent'), '⚪')
+                st.markdown(f"""
+                <div style='padding:7px 12px; background:#FFFDF9; border-radius:8px;
+                            border:1px solid #E2DDD6; margin-bottom:5px;
+                            display:flex; justify-content:space-between; align-items:center;'>
+                    <span style='font-size:0.85rem; color:#1A2332;'>{icon} {r['name']}</span>
+                    <span style='font-size:1.1rem;' title='Mood after last activity'>{emoji}</span>
+                </div>
+                """, unsafe_allow_html=True)
+                shown_any = True
+        if not shown_any:
+            st.markdown("<div style='color:#A0AEC0; font-size:0.85rem;'>Rate some activities to see mood data here.</div>",
+                        unsafe_allow_html=True)
+
+        # ── Quick nav for director ──
+        if is_director():
+            st.markdown("### ⚡ Quick Actions")
+            actions = [
+                ("👤 Resident Cards",  "Resident Cards"),
+                ("👨‍👩‍👧 Family Updates", "Family Updates"),
+                ("📊 Reports",         "Reports"),
+            ]
+            for label, page_key in actions:
+                if st.button(label, key=f"qa_{page_key}", use_container_width=True):
+                    st.session_state.page = page_key
+                    st.rerun()

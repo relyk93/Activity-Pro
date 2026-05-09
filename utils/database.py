@@ -129,15 +129,19 @@ def init_db():
         FOREIGN KEY (staff_id) REFERENCES staff(id)
     )''')
 
-    # EHR sync columns (added via ALTER if not present)
-    try:
-        c.execute("ALTER TABLE residents ADD COLUMN ehr_id TEXT")
-    except Exception:
-        pass
-    try:
-        c.execute("ALTER TABLE residents ADD COLUMN ehr_provider TEXT")
-    except Exception:
-        pass
+    # Phase 2: EHR sync columns
+    for col in ("ehr_id TEXT", "ehr_provider TEXT"):
+        try:
+            c.execute(f"ALTER TABLE residents ADD COLUMN {col}")
+        except Exception:
+            pass
+
+    # Phase 3: Family contact columns
+    for col in ("family_name TEXT", "family_email TEXT", "last_update_sent TEXT"):
+        try:
+            c.execute(f"ALTER TABLE residents ADD COLUMN {col}")
+        except Exception:
+            pass
 
     # Subscription
     c.execute('''CREATE TABLE IF NOT EXISTS subscription (
@@ -529,6 +533,102 @@ def update_resident_ehr(resident_id: int, ehr_id: str, ehr_provider: str):
     conn.execute(
         "UPDATE residents SET ehr_id=?, ehr_provider=? WHERE id=?",
         (ehr_id, ehr_provider, resident_id)
+    )
+    conn.commit()
+    conn.close()
+
+# ---- Phase 3: At-risk & briefing queries ----
+
+def get_at_risk_residents(days_threshold: int = 14) -> list:
+    """Residents with no engagement recorded in the last N days."""
+    from datetime import date, timedelta
+    cutoff = str(date.today() - timedelta(days=days_threshold))
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT r.* FROM residents r
+        WHERE r.active = 1
+        AND (
+            NOT EXISTS (SELECT 1 FROM engagements e WHERE e.resident_id = r.id)
+            OR NOT EXISTS (
+                SELECT 1 FROM engagements e
+                JOIN calendar_events ev ON e.event_id = ev.id
+                WHERE e.resident_id = r.id AND ev.date >= ?
+            )
+        )
+        ORDER BY r.name
+    """, (cutoff,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_declining_mood_residents() -> list:
+    """Residents whose last 3 recorded mood_after scores are strictly declining."""
+    conn = get_conn()
+    residents = conn.execute("SELECT * FROM residents WHERE active=1").fetchall()
+    declining = []
+    for r in residents:
+        moods = conn.execute("""
+            SELECT mood_after FROM engagements
+            WHERE resident_id=? AND mood_after IS NOT NULL
+            ORDER BY recorded_at DESC LIMIT 3
+        """, (r['id'],)).fetchall()
+        vals = [m['mood_after'] for m in moods]
+        if len(vals) == 3 and vals[0] < vals[1] < vals[2]:
+            declining.append(dict(r))
+    conn.close()
+    return declining
+
+def get_resident_mood_trend(resident_id: int, limit: int = 6) -> list:
+    """Return last N mood_after scores (oldest first) for sparkline display."""
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT e.mood_after, ev.date FROM engagements e
+        JOIN calendar_events ev ON e.event_id = ev.id
+        WHERE e.resident_id=? AND e.mood_after IS NOT NULL
+        ORDER BY ev.date DESC LIMIT ?
+    """, (resident_id, limit)).fetchall()
+    conn.close()
+    return list(reversed([dict(r) for r in rows]))
+
+def get_last_activity(resident_id: int) -> dict | None:
+    """Return the most recent engagement record for a resident."""
+    conn = get_conn()
+    row = conn.execute("""
+        SELECT e.*, ev.title as event_title, ev.date as event_date, ev.category
+        FROM engagements e
+        JOIN calendar_events ev ON e.event_id = ev.id
+        WHERE e.resident_id=?
+        ORDER BY ev.date DESC LIMIT 1
+    """, (resident_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_event_history_for_resident(resident_id: int, activity_title: str) -> dict | None:
+    """Return the last time a resident attended a specific activity."""
+    conn = get_conn()
+    row = conn.execute("""
+        SELECT e.*, ev.date as event_date, ev.title as event_title
+        FROM engagements e
+        JOIN calendar_events ev ON e.event_id = ev.id
+        WHERE e.resident_id=? AND ev.title=?
+        ORDER BY ev.date DESC LIMIT 1
+    """, (resident_id, activity_title)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def update_resident_family(resident_id: int, family_name: str, family_email: str):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE residents SET family_name=?, family_email=? WHERE id=?",
+        (family_name, family_email, resident_id)
+    )
+    conn.commit()
+    conn.close()
+
+def mark_family_update_sent(resident_id: int):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE residents SET last_update_sent=? WHERE id=?",
+        (str(datetime.now().date()), resident_id)
     )
     conn.commit()
     conn.close()

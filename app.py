@@ -222,12 +222,15 @@ with st.sidebar:
     # Directors see all pages; Floor Staff see a limited set
     all_pages = {
         "🏠 Dashboard": "Dashboard",
+        "📋 Pre-Brief": "Pre-Brief",
+        "👤 Resident Cards": "Resident Cards",
         "📅 Calendar": "Calendar",
         "🤖 AI Activity Generator": "AI Generator",
         "👥 Residents": "Residents",
         "⭐ Rate Activities": "Rate Activities",
         "📊 Reports": "Reports",
         "🖨️ Print & Export": "Print",
+        "👨‍👩‍👧 Family Updates": "Family Updates",
         "🔔 Notifications": "Notifications",
         "⚙️ Settings": "Settings",
         "💳 Subscription": "Subscription",
@@ -235,6 +238,8 @@ with st.sidebar:
     }
     staff_pages = {
         "🏠 Dashboard": "Dashboard",
+        "📋 Pre-Brief": "Pre-Brief",
+        "👤 Resident Cards": "Resident Cards",
         "📅 Calendar": "Calendar",
         "⭐ Rate Activities": "Rate Activities",
         "👥 Residents": "Residents",
@@ -294,4 +299,13 @@ elif page == "Subscription":
     show()
 elif page == "Staff Management":
     from pages.staff_management import show
+    show()
+elif page == "Resident Cards":
+    from pages.resident_cards import show
+    show()
+elif page == "Pre-Brief":
+    from pages.pre_brief import show
+    show()
+elif page == "Family Updates":
+    from pages.family_updates import show
     show()
