@@ -176,6 +176,11 @@ def init_db():
     if c.fetchone()[0] == 0:
         _seed_residents(c)
 
+    # Seed demo calendar events + engagement history
+    c.execute("SELECT COUNT(*) FROM calendar_events")
+    if c.fetchone()[0] == 0:
+        _seed_demo_events(c)
+
     conn.commit()
     conn.close()
 
@@ -272,6 +277,108 @@ def _seed_residents(c):
         c.execute("""INSERT INTO residents
             (name, age, room, birthday, mobility, cognitive, dietary, disabilities, special_needs, notes)
             VALUES (?,?,?,?,?,?,?,?,?,?)""", r)
+
+def _seed_demo_events(c):
+    """Seed two weeks of calendar events + realistic engagement history for demo."""
+    from datetime import date, timedelta
+    today = date.today()
+
+    # activity_id map: 1=Chair Yoga, 2=Memory Lane, 3=Gardening, 4=Balloon Volleyball,
+    #                  5=Meditation, 6=Bingo, 7=Sensory Bin, 8=Armchair Travel,
+    #                  9=Hand Massage, 10=Watercolor, 11=Trivia, 12=Morning Stretch
+
+    schedule = [
+        # (days_offset, activity_id, title, time, location)
+        (-13, 12, "Morning Stretch & Breathwork", "09:00", "Main Hall"),
+        (-13,  6, "Bingo with a Twist",           "14:00", "Activity Room"),
+        (-12,  1, "Morning Chair Yoga",            "09:30", "Wellness Room"),
+        (-12, 11, "Trivia Tuesday — Decades Edition", "14:00", "Dining Hall"),
+        (-11,  2, "Memory Lane Photo Sharing",     "10:00", "Sunroom"),
+        (-11,  4, "Balloon Volleyball",             "15:00", "Main Hall"),
+        (-10,  5, "Guided Meditation",             "09:00", "Wellness Room"),
+        (-10, 10, "Adaptive Art — Watercolor Wash","14:00", "Art Room"),
+        (-9,  12, "Morning Stretch & Breathwork",  "09:00", "Main Hall"),
+        (-9,   8, "Armchair Travel — Italy",       "14:00", "Activity Room"),
+        (-7,   1, "Morning Chair Yoga",            "09:30", "Wellness Room"),
+        (-7,   6, "Bingo with a Twist",            "14:00", "Activity Room"),
+        (-6,  11, "Trivia Tuesday — Decades Edition","14:00","Dining Hall"),
+        (-5,   3, "Tabletop Gardening",            "10:00", "Garden Patio"),
+        (-5,   9, "Hand Massage & Lotion Circle",  "15:00", "Sunroom"),
+        (-4,  12, "Morning Stretch & Breathwork",  "09:00", "Main Hall"),
+        (-4,  10, "Adaptive Art — Watercolor Wash","14:00", "Art Room"),
+        (-3,   2, "Memory Lane Photo Sharing",     "10:00", "Sunroom"),
+        (-3,   4, "Balloon Volleyball",            "15:00", "Main Hall"),
+        (-2,   1, "Morning Chair Yoga",            "09:30", "Wellness Room"),
+        (-2,   5, "Guided Meditation",             "14:00", "Wellness Room"),
+        (-1,  12, "Morning Stretch & Breathwork",  "09:00", "Main Hall"),
+        (-1,   6, "Bingo with a Twist",            "14:00", "Activity Room"),
+        # Today
+        ( 0,   1, "Morning Chair Yoga",            "09:30", "Wellness Room"),
+        ( 0,  11, "Trivia Tuesday — Decades Edition","14:00","Dining Hall"),
+        ( 0,   9, "Hand Massage & Lotion Circle",  "16:00", "Sunroom"),
+        # Future this week
+        ( 1,   3, "Tabletop Gardening",            "10:00", "Garden Patio"),
+        ( 1,   8, "Armchair Travel — Italy",       "14:00", "Activity Room"),
+        ( 2,  12, "Morning Stretch & Breathwork",  "09:00", "Main Hall"),
+        ( 2,  10, "Adaptive Art — Watercolor Wash","14:00", "Art Room"),
+        ( 3,   6, "Bingo with a Twist",            "14:00", "Activity Room"),
+        ( 3,   4, "Balloon Volleyball",            "15:00", "Main Hall"),
+    ]
+
+    event_ids = []
+    for days_offset, act_id, title, time_, location in schedule:
+        event_date = (today + timedelta(days=days_offset)).isoformat()
+        c.execute("""INSERT INTO calendar_events (activity_id, title, date, time, location, group_type)
+                     VALUES (?,?,?,?,?,?)""", (act_id, title, event_date, time_, location, "all"))
+        event_ids.append((c.lastrowid, days_offset, act_id))
+
+    # Resident IDs 1-8, realistic engagement patterns
+    # Margaret(1): high engager, great mood lifts
+    # Bob(2): good engager, hearing issues noted
+    # Dorothy(3): moderate, dementia affects engagement
+    # Harold(4): selective, prefers cognitive
+    # Evelyn(5): moderate, anxiety some days
+    # Frank(6): variable due to Parkinson's
+    # Grace(7): excellent engager, mood always improves
+    # Walter(8): low engager recently (at-risk demo)
+
+    import random
+    random.seed(42)  # deterministic so data looks the same every time
+
+    engagement_patterns = {
+        1: {"base_rate": 0.90, "mood_before": [3,4,4,4,5], "mood_lift": [1,1,2,2,1]},
+        2: {"base_rate": 0.75, "mood_before": [3,3,4,4,3], "mood_lift": [1,1,1,2,0]},
+        3: {"base_rate": 0.60, "mood_before": [2,3,3,2,3], "mood_lift": [1,2,1,1,2]},
+        4: {"base_rate": 0.80, "mood_before": [4,4,5,4,4], "mood_lift": [0,1,0,1,1]},
+        5: {"base_rate": 0.65, "mood_before": [3,3,4,3,4], "mood_lift": [1,1,2,1,1]},
+        6: {"base_rate": 0.55, "mood_before": [3,2,3,3,2], "mood_lift": [1,1,2,0,1]},
+        7: {"base_rate": 0.95, "mood_before": [4,4,5,5,4], "mood_lift": [1,1,1,2,1]},
+        8: {"base_rate": 0.30, "mood_before": [2,2,3,2,2], "mood_lift": [1,0,1,1,0]},
+    }
+
+    notes_pool = {
+        True:  ["Very engaged today", "Smiled throughout", "Led the group at one point",
+                 "Great participation", "Asked to do this again", "Uplifting session for them"],
+        False: ["Tired today, sat quietly", "Declined to participate", "Left early",
+                "Not feeling well", "Low energy", "Distracted, may try again next time"],
+    }
+
+    for event_id, days_offset, act_id in event_ids:
+        if days_offset >= 0:  # only log past events
+            continue
+        for resident_id in range(1, 9):
+            pat = engagement_patterns[resident_id]
+            engaged = random.random() < pat["base_rate"]
+            mood_before = random.choice(pat["mood_before"])
+            lift = random.choice(pat["mood_lift"]) if engaged else 0
+            mood_after = min(5, mood_before + lift)
+            note = random.choice(notes_pool[engaged])
+            c.execute("""INSERT INTO engagements
+                (event_id, resident_id, engaged, rating, mood_before, mood_after, staff_note)
+                VALUES (?,?,?,?,?,?,?)""",
+                (event_id, resident_id, int(engaged),
+                 random.randint(3,5) if engaged else random.randint(1,3),
+                 mood_before, mood_after, note))
 
 # ---- CRUD helpers ----
 
