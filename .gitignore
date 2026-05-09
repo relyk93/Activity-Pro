@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Database (keep structure, not data - optional: remove if you want to track seed DB)
+activitypro.db
+
+# Environment variables - NEVER commit API keys
+.env
+.env.local
+.env.production
+secrets.toml
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Exports & temp files
+exports/
+*.zip
+*.tmp
+
+# Node (if frontend added later)
+node_modules/

@@ -1,0 +1,113 @@
+name: ActivityPro CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Lint & Syntax Check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyflakes
+
+      - name: Check Python syntax (all files)
+        run: |
+          echo "Checking app.py..."
+          python -m pyflakes app.py
+          echo "Checking pages..."
+          python -m pyflakes pages/
+          echo "Checking utils..."
+          python -m pyflakes utils/
+          echo "✅ Syntax check complete"
+
+      - name: Test database initialization
+        run: |
+          python -c "
+          from utils.database import init_db, get_residents, get_activities, get_subscription
+          init_db()
+          r = get_residents()
+          a = get_activities()
+          s = get_subscription()
+          assert len(r) > 0, 'No residents seeded'
+          assert len(a) > 0, 'No activities seeded'
+          assert s is not None, 'No subscription record'
+          print(f'✅ DB OK — {len(r)} residents, {len(a)} activities')
+          "
+
+      - name: Confirm required files exist
+        run: |
+          files=(
+            "app.py"
+            "requirements.txt"
+            "README.md"
+            "pages/dashboard.py"
+            "pages/calendar_view.py"
+            "pages/ai_generator.py"
+            "pages/residents.py"
+            "pages/rate_activities.py"
+            "pages/reports.py"
+            "pages/notifications.py"
+            "pages/print_calendar.py"
+            "utils/database.py"
+            "utils/auth.py"
+            "utils/email_sender.py"
+            "utils/pdf_export.py"
+            "docs/SETUP.md"
+            "docs/USER_GUIDE.md"
+            "docs/DEPLOYMENT.md"
+            "docs/CHANGELOG.md"
+          )
+          all_ok=true
+          for f in "${files[@]}"; do
+            if [ -f "$f" ]; then
+              echo "✅ $f"
+            else
+              echo "❌ MISSING: $f"
+              all_ok=false
+            fi
+          done
+          if [ "$all_ok" = false ]; then
+            echo "Some files are missing!"
+            exit 1
+          fi
+
+  deploy-check:
+    runs-on: ubuntu-latest
+    name: Deployment Readiness
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check .gitignore protects secrets
+        run: |
+          if grep -q "secrets.toml" .gitignore; then
+            echo "✅ secrets.toml is protected"
+          else
+            echo "❌ WARNING: secrets.toml not in .gitignore!"
+            exit 1
+          fi
+      - name: Check requirements.txt is present
+        run: |
+          if [ -f "requirements.txt" ]; then
+            echo "✅ requirements.txt found"
+            cat requirements.txt
+          else
+            echo "❌ requirements.txt missing"
+            exit 1
+          fi
