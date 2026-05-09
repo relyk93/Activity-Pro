@@ -2,7 +2,7 @@
 
 > **AI-powered activity management for senior living facilities — designed by activity directors, for activity directors.**
 
-[![CI Status](https://github.com/YOUR_USERNAME/activitypro/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/activitypro/actions)
+[![CI Status](https://github.com/relyk93/Activity-Pro/actions/workflows/ci.yml/badge.svg)](https://github.com/relyk93/Activity-Pro/actions)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.32%2B-red)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -47,7 +47,7 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/activitypro.git
+git clone https://github.com/relyk93/Activity-Pro.git
 cd activitypro
 
 # 2. Install dependencies
@@ -105,19 +105,21 @@ activitypro/
 
 ## Phase Roadmap
 
-**Phase 1 — Core (Complete):** AI calendar, residents, engagement, reports, subscriptions
+**[Phase 1 — Core (Complete)](docs/PHASE1_README.md):** AI calendar, residents, engagement, reports, subscriptions, email, print
 
-**Phase 2 — Polish (Complete):** Mobile UI, printable calendar, email notifications, GitHub CI, full docs
+**[Phase 2 — Power Features (In Progress)](docs/PHASE2_README.md):** Staff logins, photo documentation, trend graphs, clinical PDFs, EHR integration
 
-**Phase 3 — Power Features:** Staff logins, photo documentation, EHR integration, trend graphs
+**Phase 3 — Scale:** Stripe payments, multi-facility management, multilingual support
 
-**Phase 4 — Scale:** Stripe payments, multi-facility, multilingual, native mobile app
+**Phase 4 — Native Mobile:** iOS and Android app, partner program
 
 ---
 
 ## Documentation
 | File | Description |
 |------|-------------|
+| [docs/PHASE1_README.md](docs/PHASE1_README.md) | Phase 1 — what was built |
+| [docs/PHASE2_README.md](docs/PHASE2_README.md) | Phase 2 — what's being built next |
 | [docs/SETUP.md](docs/SETUP.md) | Local setup guide |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deploy to web |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Feature walkthrough |
