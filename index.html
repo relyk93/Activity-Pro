@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ActivityPro — Senior Care Activity Calendar</title>
+  <meta name="description" content="AI-powered activity planning for senior living facilities. Designed for activity directors who want to spend less time on paperwork and more time with residents." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sage:       #7C9A7E;
+      --sage-light: #A8C5AA;
+      --sage-dark:  #4A6B4C;
+      --cream:      #FAF7F2;
+      --warm-white: #FFFDF9;
+      --terra:      #C47B5A;
+      --terra-light:#E8A98A;
+      --navy:       #2C3E50;
+      --navy-dark:  #1A2332;
+      --gold:       #D4A843;
+      --lavender:   #9B8EC4;
+      --text:       #1A2332;
+      --text-mid:   #4A5568;
+      --text-light: #718096;
+      --border:     #E2DDD6;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    h1, h2, h3 { font-family: 'Playfair Display', serif; }
+
+    a { text-decoration: none; color: inherit; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(250,247,242,0.96);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 5%;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 68px;
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem; font-weight: 700;
+      color: var(--navy-dark);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a {
+      font-size: 0.9rem; font-weight: 500;
+      color: var(--text-mid);
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--sage-dark); }
+    .nav-ctas { display: flex; gap: 12px; align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 22px; border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      border: none;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-mid);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--sage); color: var(--sage-dark); }
+    .btn-primary {
+      background: var(--sage-dark);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--sage); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(74,107,76,0.3); }
+    .btn-large { padding: 14px 32px; font-size: 1rem; border-radius: 12px; }
+    .btn-terra {
+      background: var(--terra);
+      color: white;
+    }
+    .btn-terra:hover { background: var(--terra-light); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(196,123,90,0.3); }
+    .btn-outline-white {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255,255,255,0.5);
+    }
+    .btn-outline-white:hover { border-color: white; background: rgba(255,255,255,0.1); }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 96px 5% 80px;
+      text-align: center;
+      max-width: 900px; margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #EEF5EE, #F5F9F5);
+      border: 1px solid var(--sage-light);
+      color: var(--sage-dark);
+      font-size: 0.8rem; font-weight: 600;
+      padding: 6px 16px; border-radius: 20px;
+      margin-bottom: 28px;
+      letter-spacing: 0.04em;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      line-height: 1.15;
+      color: var(--navy-dark);
+      margin-bottom: 20px;
+    }
+    .hero h1 span { color: var(--sage-dark); }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-mid);
+      max-width: 620px; margin: 0 auto 36px;
+      line-height: 1.75;
+    }
+    .hero-ctas {
+      display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 52px;
+    }
+    .hero-pills {
+      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.82rem; color: var(--text-mid);
+    }
+    .pill-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sage); }
+
+    /* ── TRUST STRIP ── */
+    .trust {
+      background: var(--navy);
+      padding: 20px 5%;
+      display: flex; justify-content: center; align-items: center;
+      gap: 48px; flex-wrap: wrap;
+    }
+    .trust-item {
+      color: rgba(255,255,255,0.75);
+      font-size: 0.85rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .trust-item strong { color: white; }
+
+    /* ── SECTION WRAPPER ── */
+    .section { padding: 80px 5%; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--sage);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      color: var(--navy-dark);
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 1rem; color: var(--text-mid);
+      max-width: 580px; line-height: 1.7;
+      margin-bottom: 52px;
+    }
+
+    /* ── FEATURES GRID ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { box-shadow: 0 8px 30px rgba(44,62,80,0.1); transform: translateY(-2px); }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; margin-bottom: 16px;
+    }
+    .icon-sage     { background: #EEF5EE; }
+    .icon-terra    { background: #FBF0EA; }
+    .icon-lavender { background: #F0EDF8; }
+    .icon-sky      { background: #EAF3F8; }
+    .icon-gold     { background: #FDF5E0; }
+    .icon-navy     { background: #EAF0F6; }
+    .feature-card h3 { font-size: 1.05rem; margin-bottom: 8px; color: var(--navy-dark); }
+    .feature-card p  { font-size: 0.88rem; color: var(--text-mid); line-height: 1.65; }
+
+    /* ── ACTIVITY STRIP ── */
+    .activity-section { background: var(--navy); padding: 72px 5%; }
+    .activity-section .section-label { color: var(--sage-light); }
+    .activity-section .section-title { color: white; margin-bottom: 8px; }
+    .activity-section .section-sub   { color: rgba(255,255,255,0.65); margin-bottom: 40px; }
+    .activities-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .activity-chip {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: rgba(255,255,255,0.9);
+      font-size: 0.88rem; font-weight: 500;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .activity-chip span { font-size: 1.1rem; }
+
+    /* ── HOW IT WORKS ── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 32px;
+    }
+    .step {
+      text-align: center; padding: 12px;
+    }
+    .step-number {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--sage-dark), var(--sage));
+      color: white;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .step h3 { font-size: 1.05rem; margin-bottom: 8px; color: var(--navy-dark); }
+    .step p  { font-size: 0.88rem; color: var(--text-mid); line-height: 1.65; }
+
+    /* ── PRICING ── */
+    .pricing-section { background: var(--warm-white); padding: 80px 5%; }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      max-width: 1000px; margin: 0 auto;
+    }
+    .pricing-card {
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      position: relative;
+    }
+    .pricing-card.featured {
+      border-color: var(--sage);
+      box-shadow: 0 8px 40px rgba(74,107,76,0.15);
+    }
+    .pricing-badge {
+      position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--sage-dark), var(--sage));
+      color: white;
+      font-size: 0.75rem; font-weight: 700;
+      padding: 4px 16px; border-radius: 20px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .pricing-tier { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--sage); margin-bottom: 8px; }
+    .pricing-price {
+      display: flex; align-items: baseline; gap: 4px;
+      margin-bottom: 6px;
+    }
+    .price-amount { font-family: 'Playfair Display', serif; font-size: 2.8rem; font-weight: 700; color: var(--navy-dark); }
+    .price-period { font-size: 0.9rem; color: var(--text-light); }
+    .pricing-desc { font-size: 0.88rem; color: var(--text-mid); margin-bottom: 24px; line-height: 1.6; }
+    .pricing-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 20px; }
+    .pricing-features { list-style: none; margin-bottom: 28px; }
+    .pricing-features li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 0.88rem; color: var(--text-mid);
+      padding: 6px 0;
+    }
+    .check { color: var(--sage-dark); font-size: 0.9rem; flex-shrink: 0; margin-top: 2px; }
+    .pricing-cta { width: 100%; text-align: center; }
+
+    /* ── QUOTE STRIP ── */
+    .quote-strip {
+      background: linear-gradient(135deg, var(--sage-dark), #5A8A5C);
+      padding: 72px 5%;
+      text-align: center;
+    }
+    .quote-strip blockquote {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      color: white;
+      max-width: 720px; margin: 0 auto 16px;
+      line-height: 1.5;
+    }
+    .quote-strip cite { color: rgba(255,255,255,0.7); font-size: 0.9rem; font-style: normal; }
+
+    /* ── FINAL CTA ── */
+    .final-cta {
+      padding: 96px 5%;
+      text-align: center;
+    }
+    .final-cta h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); color: var(--navy-dark); margin-bottom: 16px; }
+    .final-cta p  { font-size: 1rem; color: var(--text-mid); margin-bottom: 36px; }
+    .final-cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--navy-dark);
+      padding: 48px 5% 32px;
+    }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .footer-brand p { font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 10px; line-height: 1.6; max-width: 280px; }
+    .footer-col h4 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 14px; }
+    .footer-col a  { display: block; font-size: 0.88rem; color: rgba(255,255,255,0.65); margin-bottom: 10px; transition: color 0.2s; }
+    .footer-col a:hover { color: var(--sage-light); }
+    .footer-bottom {
+      max-width: 1100px; margin: 28px auto 0;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    }
+    .footer-bottom p { font-size: 0.82rem; color: rgba(255,255,255,0.35); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 4%; }
+      .nav-links { display: none; }
+      .hero { padding: 64px 4% 56px; }
+      .trust { gap: 24px; }
+      .section { padding: 60px 4%; }
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+      .footer-brand { grid-column: 1 / -1; }
+    }
+    @media (max-width: 480px) {
+      .footer-inner { grid-template-columns: 1fr; }
+      .hero-ctas { flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════════ NAV ════════════ -->
+  <nav>
+    <div class="nav-logo">🌸 ActivityPro</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#activities">Activities</a>
+      <a href="#how">How It Works</a>
+      <a href="#pricing">Pricing</a>
+    </div>
+    <div class="nav-ctas">
+      <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Demo%20Request" class="btn btn-ghost">Request Demo</a>
+      <a href="#pricing" class="btn btn-primary">Get Started Free</a>
+    </div>
+  </nav>
+
+  <!-- ════════════ HERO ════════════ -->
+  <section class="hero">
+    <div class="hero-badge">🌿 Built for Activity Directors</div>
+    <h1>Activity planning that works<br><span>as hard as you do.</span></h1>
+    <p>
+      ActivityPro gives senior living facilities an AI-powered activity calendar,
+      resident profiles, engagement tracking, and family updates —
+      all in one place, simple enough to use every day.
+    </p>
+    <div class="hero-ctas">
+      <a href="#pricing" class="btn btn-primary btn-large">Start for Free →</a>
+      <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Demo%20Request&body=Hi%2C%20I%27d%20like%20to%20see%20a%20demo%20of%20ActivityPro%20for%20our%20facility." class="btn btn-terra btn-large">Request a Demo</a>
+    </div>
+    <div class="hero-pills">
+      <div class="pill"><div class="pill-dot"></div> No credit card required</div>
+      <div class="pill"><div class="pill-dot"></div> Free forever plan</div>
+      <div class="pill"><div class="pill-dot"></div> Set up in minutes</div>
+      <div class="pill"><div class="pill-dot"></div> 12+ pre-built activities</div>
+    </div>
+  </section>
+
+  <!-- ════════════ TRUST STRIP ════════════ -->
+  <div class="trust">
+    <div class="trust-item">🏥 <span>Designed for <strong>senior living facilities</strong></span></div>
+    <div class="trust-item">🤖 <span>Powered by <strong>Claude AI</strong></span></div>
+    <div class="trust-item">♿ <span>Supports <strong>19 disability types</strong></span></div>
+    <div class="trust-item">📋 <span>Care plan-ready <strong>documentation</strong></span></div>
+    <div class="trust-item">👨‍👩‍👧 <span>Built-in <strong>family updates</strong></span></div>
+  </div>
+
+  <!-- ════════════ FEATURES ════════════ -->
+  <section class="section" id="features">
+    <div class="section-inner">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">Everything the activity director needs.<br>Nothing they don't.</h2>
+      <p class="section-sub">
+        ActivityPro brings the right information to you — no hunting through menus,
+        no double data entry, no paperwork that eats into your time with residents.
+      </p>
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <div class="feature-icon icon-sage">🤖</div>
+          <h3>AI Activity Generator</h3>
+          <p>Describe your group and press a button. Claude AI generates a full week of personalized activities adapted for your residents' specific disabilities, interests, and mobility levels.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-terra">📋</div>
+          <h3>Session Pre-Brief</h3>
+          <p>Before every activity, see each attendee's disability reminders, dietary needs, mood trend, and what happened the last time they attended that specific activity — all on one screen.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-lavender">👤</div>
+          <h3>Resident Quick Cards</h3>
+          <p>One-tap access to everything about a resident: conditions, interests, staff notes, mood trend, engagement rate, and days since their last activity. Flag at-risk residents instantly.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-sky">📊</div>
+          <h3>Mood & Engagement Trends</h3>
+          <p>Visual charts show resident mood before and after each session, engagement by day of week, and your most effective activities — ranked by real data, not guesswork.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-gold">👨‍👩‍👧</div>
+          <h3>One-Button Family Updates</h3>
+          <p>ActivityPro writes the family email for you. Add a contact email per resident, click preview, click send. Families stay informed without adding an hour to your day.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-navy">⚠️</div>
+          <h3>Smart Daily Briefing</h3>
+          <p>Every morning the dashboard surfaces who hasn't engaged in 14+ days, who has a declining mood trend, and today's schedule with pre-brief shortcuts — before you ask for it.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-sage">📸</div>
+          <h3>Photo Documentation</h3>
+          <p>Attach photos to any session directly from your phone or tablet. Build a visual record of activity participation that families love and regulators respect.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-terra">📄</div>
+          <h3>Clinical PDF Reports</h3>
+          <p>Generate care plan-ready resident reports as true PDFs — no browser print dialog. Includes engagement history, mood data, disability profile, and a care plan summary paragraph.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-lavender">👤</div>
+          <h3>Staff Logins & Roles</h3>
+          <p>Directors get full access. Floor staff see the calendar, resident cards, and attendance tracking. Everyone logs in with their own account — accountability without complexity.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ ACTIVITIES ════════════ -->
+  <section class="activity-section" id="activities">
+    <div class="section-inner">
+      <div class="section-label">Activity Library</div>
+      <h2 class="section-title">12 expert activities included.<br>Unlimited AI-generated ones.</h2>
+      <p class="section-sub">
+        Every account starts with 12 fully detailed activities — including instructions,
+        supplies lists, and cost estimates. Pro users can generate unlimited new ones with AI.
+      </p>
+      <div class="activities-grid">
+        <div class="activity-chip"><span>🧘</span> Morning Chair Yoga</div>
+        <div class="activity-chip"><span>📷</span> Memory Lane Photo Sharing</div>
+        <div class="activity-chip"><span>🌱</span> Tabletop Gardening</div>
+        <div class="activity-chip"><span>🎈</span> Balloon Volleyball</div>
+        <div class="activity-chip"><span>🌊</span> Guided Meditation</div>
+        <div class="activity-chip"><span>🎯</span> Bingo with a Twist</div>
+        <div class="activity-chip"><span>🪣</span> Sensory Bin Exploration</div>
+        <div class="activity-chip"><span>✈️</span> Armchair Travel — Italy</div>
+        <div class="activity-chip"><span>💆</span> Hand Massage Circle</div>
+        <div class="activity-chip"><span>🎨</span> Adaptive Watercolor Art</div>
+        <div class="activity-chip"><span>🧠</span> Trivia — Decades Edition</div>
+        <div class="activity-chip"><span>🌅</span> Morning Stretch & Breathwork</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ HOW IT WORKS ════════════ -->
+  <section class="section" id="how">
+    <div class="section-inner">
+      <div class="section-label">How It Works</div>
+      <h2 class="section-title">Up and running in minutes.</h2>
+      <p class="section-sub">No training required. No IT department needed. If you can use a phone, you can use ActivityPro.</p>
+      <div class="how-grid">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Add Your Residents</h3>
+          <p>Enter each resident's name, room, disabilities, dietary needs, and interests. ActivityPro uses this to tailor every activity recommendation to your specific group.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Generate Your Calendar</h3>
+          <p>Click "Generate Week" and the AI creates a full schedule of disability-appropriate, interest-matched activities for your residents. Edit anything you like.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Run Sessions & Track</h3>
+          <p>Use the pre-brief before each session. After, log attendance and mood in seconds. ActivityPro builds your reports, alerts, and family updates automatically.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ QUOTE ════════════ -->
+  <div class="quote-strip">
+    <blockquote>
+      "The best activity directors don't spend their energy on paperwork.<br>
+      They spend it on people."
+    </blockquote>
+    <cite>— The thinking behind ActivityPro</cite>
+  </div>
+
+  <!-- ════════════ PRICING ════════════ -->
+  <section class="pricing-section" id="pricing">
+    <div class="section-inner">
+      <div style="text-align:center; margin-bottom: 52px;">
+        <div class="section-label" style="display:inline-block;">Pricing</div>
+        <h2 class="section-title">Start free. Upgrade when you're ready.</h2>
+        <p class="section-sub" style="margin: 0 auto;">
+          Every plan includes the full activity library, resident profiles, and engagement tracking.
+          No hidden fees. Cancel anytime.
+        </p>
+      </div>
+      <div class="pricing-grid">
+
+        <!-- FREE -->
+        <div class="pricing-card">
+          <div class="pricing-tier">Free</div>
+          <div class="pricing-price">
+            <span class="price-amount">$0</span>
+            <span class="price-period">/ month</span>
+          </div>
+          <p class="pricing-desc">Everything you need to get started. Perfect for testing ActivityPro with your facility before committing.</p>
+          <hr class="pricing-divider" />
+          <ul class="pricing-features">
+            <li><span class="check">✓</span> Up to 15 residents</li>
+            <li><span class="check">✓</span> Weekly activity calendar</li>
+            <li><span class="check">✓</span> 12 pre-built activity library</li>
+            <li><span class="check">✓</span> Full activity instructions & supplies</li>
+            <li><span class="check">✓</span> Basic engagement tracking</li>
+            <li><span class="check">✓</span> Resident profiles & disability notes</li>
+            <li><span class="check">✓</span> Resident Quick Cards</li>
+            <li><span class="check">✓</span> Session Pre-Brief</li>
+          </ul>
+          <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Free%20Plan" class="btn btn-ghost pricing-cta btn-large">Get Started Free</a>
+        </div>
+
+        <!-- PRO -->
+        <div class="pricing-card featured">
+          <div class="pricing-badge">Most Popular</div>
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">
+            <span class="price-amount">$29</span>
+            <span class="price-period">/ month</span>
+          </div>
+          <p class="pricing-desc">For active facilities that want AI-powered scheduling, full reporting, and family communication tools.</p>
+          <hr class="pricing-divider" />
+          <ul class="pricing-features">
+            <li><span class="check">✓</span> <strong>Unlimited residents</strong></li>
+            <li><span class="check">✓</span> Everything in Free</li>
+            <li><span class="check">✓</span> <strong>AI activity generation</strong></li>
+            <li><span class="check">✓</span> Mood tracking before & after</li>
+            <li><span class="check">✓</span> Trend charts & analytics</li>
+            <li><span class="check">✓</span> Care plan summaries</li>
+            <li><span class="check">✓</span> Printable wall calendars</li>
+            <li><span class="check">✓</span> Clinical PDF reports</li>
+            <li><span class="check">✓</span> Photo documentation</li>
+            <li><span class="check">✓</span> Family email updates</li>
+            <li><span class="check">✓</span> Staff login & roles</li>
+            <li><span class="check">✓</span> Smart daily briefing & alerts</li>
+            <li><span class="check">✓</span> 19 disability types supported</li>
+          </ul>
+          <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Pro%20Plan" class="btn btn-primary pricing-cta btn-large">Start Pro Trial</a>
+        </div>
+
+        <!-- ENTERPRISE -->
+        <div class="pricing-card">
+          <div class="pricing-tier">Enterprise</div>
+          <div class="pricing-price">
+            <span class="price-amount">$79</span>
+            <span class="price-period">/ month</span>
+          </div>
+          <p class="pricing-desc">For multi-site operators and larger organizations that need advanced integrations and compliance tools.</p>
+          <hr class="pricing-divider" />
+          <ul class="pricing-features">
+            <li><span class="check">✓</span> Everything in Pro</li>
+            <li><span class="check">✓</span> Multi-facility management</li>
+            <li><span class="check">✓</span> EHR integration (PointClickCare, MatrixCare)</li>
+            <li><span class="check">✓</span> HIPAA-compliant cloud backup</li>
+            <li><span class="check">✓</span> Multilingual support</li>
+            <li><span class="check">✓</span> Facility comparison reports</li>
+            <li><span class="check">✓</span> API access</li>
+            <li><span class="check">✓</span> Priority support</li>
+            <li><span class="check">✓</span> Dedicated account manager</li>
+            <li><span class="check">✓</span> Custom onboarding & training</li>
+          </ul>
+          <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Enterprise%20Inquiry" class="btn btn-ghost pricing-cta btn-large">Contact Us</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ FINAL CTA ════════════ -->
+  <section class="final-cta">
+    <div class="section-label" style="display:inline-block; margin-bottom:16px;">Get Started Today</div>
+    <h2>Your residents deserve great activities.<br>Your director deserves great tools.</h2>
+    <p>Join ActivityPro free — no credit card, no commitment, no IT department needed.</p>
+    <div class="final-cta-btns">
+      <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Free%20Plan" class="btn btn-primary btn-large">Start for Free →</a>
+      <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Demo%20Request&body=Hi%2C%20I%27d%20like%20to%20schedule%20a%20demo%20of%20ActivityPro%20for%20our%20facility." class="btn btn-terra btn-large">Request a Demo</a>
+    </div>
+  </section>
+
+  <!-- ════════════ FOOTER ════════════ -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="nav-logo" style="color:white; margin-bottom:12px;">🌸 ActivityPro</div>
+        <p>AI-powered activity planning for senior living facilities. Built to help activity directors spend less time on paperwork and more time with the people who matter.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <a href="#features">Features</a>
+        <a href="#activities">Activity Library</a>
+        <a href="#how">How It Works</a>
+        <a href="#pricing">Pricing</a>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Demo%20Request">Request a Demo</a>
+        <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Support">Support</a>
+        <a href="mailto:kyl3rking@gmail.com?subject=ActivityPro%20Enterprise%20Inquiry">Enterprise Inquiry</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 ActivityPro. Built with 💚 for activity directors everywhere.</p>
+      <p>Powered by Claude AI · activitypro.app</p>
+    </div>
+  </footer>
+
+</body>
+</html>
