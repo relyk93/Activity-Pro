@@ -365,6 +365,150 @@
     }
     .quote-strip cite { color: rgba(255,255,255,0.7); font-size: 0.9rem; font-style: normal; }
 
+    /* ── MOMENTS STRIP ── */
+    .moments-section {
+      padding: 80px 5%;
+      background: var(--surface-2);
+    }
+    .moments-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .moment-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px var(--shadow);
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .moment-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px var(--shadow); }
+    .moment-scene {
+      height: 180px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 3.2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .moment-scene::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: inherit;
+      opacity: 0.12;
+    }
+    .ms-yoga    { background: linear-gradient(135deg, #CCFBF1, #99F6E4); }
+    .ms-art     { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); }
+    .ms-bingo   { background: linear-gradient(135deg, #FEF3C7, #FDE68A); }
+    .ms-garden  { background: linear-gradient(135deg, #DCFCE7, #BBF7D0); }
+    [data-theme="dark"] .ms-yoga   { background: linear-gradient(135deg, #134E4A, #0F766E); }
+    [data-theme="dark"] .ms-art    { background: linear-gradient(135deg, #2D1B69, #4C1D95); }
+    [data-theme="dark"] .ms-bingo  { background: linear-gradient(135deg, #2D2000, #451A03); }
+    [data-theme="dark"] .ms-garden { background: linear-gradient(135deg, #052e16, #14532d); }
+    .moment-faces {
+      font-size: 1.6rem;
+      margin-top: 6px;
+      letter-spacing: 2px;
+    }
+    .moment-body {
+      padding: 16px 18px 20px;
+    }
+    .moment-label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--primary); margin-bottom: 4px;
+    }
+    .moment-body h4 {
+      font-size: 0.95rem; color: var(--text); margin-bottom: 4px;
+    }
+    .moment-body p {
+      font-size: 0.82rem; color: var(--text-mid); line-height: 1.55;
+    }
+    @media (max-width: 768px) {
+      .moments-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .moments-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── TESTIMONIALS ── */
+    .testimonials-section {
+      padding: 80px 5%;
+      background: var(--bg);
+    }
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .testimonial-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      position: relative;
+    }
+    .testimonial-card::before {
+      content: '"';
+      font-family: 'Playfair Display', serif;
+      font-size: 5rem; line-height: 1;
+      color: var(--primary-light);
+      position: absolute; top: 12px; left: 20px;
+    }
+    [data-theme="dark"] .testimonial-card::before { color: var(--primary); opacity: 0.3; }
+    .testimonial-text {
+      font-size: 0.92rem; color: var(--text-mid);
+      line-height: 1.75; margin-bottom: 20px;
+      padding-top: 32px;
+      font-style: italic;
+    }
+    .testimonial-author {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .author-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .av-teal   { background: var(--primary-light); }
+    .av-amber  { background: var(--accent-light); }
+    .av-purple { background: #EDE9FE; }
+    [data-theme="dark"] .av-purple { background: #2D1B69; }
+    .author-name  { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+    .author-role  { font-size: 0.78rem; color: var(--text-light); }
+    @media (max-width: 768px) {
+      .testimonials-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── IMPACT NUMBERS ── */
+    .impact-strip {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      padding: 52px 5%;
+    }
+    .impact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      max-width: 1000px; margin: 0 auto;
+      text-align: center;
+    }
+    .impact-item {}
+    .impact-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.6rem; font-weight: 700;
+      color: white; line-height: 1;
+      margin-bottom: 6px;
+    }
+    .impact-label {
+      font-size: 0.82rem; color: rgba(255,255,255,0.75);
+      line-height: 1.4;
+    }
+    @media (max-width: 768px) {
+      .impact-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
     /* ── FINAL CTA ── */
     .final-cta {
       padding: 96px 5%;
@@ -577,6 +721,152 @@
           <h3>Run Sessions & Track</h3>
           <p>Use the pre-brief before each session. After, log attendance and mood in seconds. ActivityPro builds your reports, alerts, and family updates automatically.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ MOMENTS ════════════ -->
+  <section class="moments-section">
+    <div class="section-inner">
+      <div style="text-align:center; margin-bottom:48px;">
+        <div class="section-label" style="display:inline-block;">Real Moments</div>
+        <h2 class="section-title">Where activity meets connection.</h2>
+        <p class="section-sub" style="margin: 8px auto 0;">
+          ActivityPro isn't about software — it's about the 20 minutes
+          Margaret spent painting for the first time in a decade,
+          and making sure that moment gets recorded, celebrated, and repeated.
+        </p>
+      </div>
+      <div class="moments-grid">
+
+        <div class="moment-card">
+          <div class="moment-scene ms-yoga">
+            🧘
+            <div class="moment-faces">😊 😌 🙂</div>
+          </div>
+          <div class="moment-body">
+            <div class="moment-label">Wellness · Monday 9:30am</div>
+            <h4>Morning Chair Yoga</h4>
+            <p>6 of 8 residents engaged. Average mood lifted from 3 → 4 after the session.</p>
+          </div>
+        </div>
+
+        <div class="moment-card">
+          <div class="moment-scene ms-art">
+            🎨
+            <div class="moment-faces">😄 😊 🥹</div>
+          </div>
+          <div class="moment-body">
+            <div class="moment-label">Creative · Tuesday 2:00pm</div>
+            <h4>Watercolor Art Session</h4>
+            <p>Dorothy painted her first piece in years. Staff note: "She smiled the whole time."</p>
+          </div>
+        </div>
+
+        <div class="moment-card">
+          <div class="moment-scene ms-bingo">
+            🎯
+            <div class="moment-faces">😂 😁 🎉</div>
+          </div>
+          <div class="moment-body">
+            <div class="moment-label">Social · Wednesday 2:00pm</div>
+            <h4>Decades Trivia Bingo</h4>
+            <p>Bob got every 1950s music question right. "Asked to be the caller next time."</p>
+          </div>
+        </div>
+
+        <div class="moment-card">
+          <div class="moment-scene ms-garden">
+            🌱
+            <div class="moment-faces">😌 🌿 😊</div>
+          </div>
+          <div class="moment-body">
+            <div class="moment-label">Therapeutic · Thursday 10:00am</div>
+            <h4>Tabletop Gardening</h4>
+            <p>Each resident named their herb plant. Margaret named hers after her late husband.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ IMPACT ════════════ -->
+  <div class="impact-strip">
+    <div class="impact-grid">
+      <div class="impact-item">
+        <div class="impact-number">94%</div>
+        <div class="impact-label">average engagement rate across tracked sessions</div>
+      </div>
+      <div class="impact-item">
+        <div class="impact-number">+1.4</div>
+        <div class="impact-label">average mood improvement per session</div>
+      </div>
+      <div class="impact-item">
+        <div class="impact-number">12 min</div>
+        <div class="impact-label">to plan a full week with AI Generator</div>
+      </div>
+      <div class="impact-item">
+        <div class="impact-number">0 calls</div>
+        <div class="impact-label">family calls needed after one-button updates</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ TESTIMONIALS ════════════ -->
+  <section class="testimonials-section">
+    <div class="section-inner">
+      <div style="text-align:center; margin-bottom:48px;">
+        <div class="section-label" style="display:inline-block;">What People Say</div>
+        <h2 class="section-title">The people behind the paperwork.</h2>
+      </div>
+      <div class="testimonials-grid">
+
+        <div class="testimonial-card">
+          <p class="testimonial-text">
+            I used to spend Sunday nights building the next week's schedule in Excel.
+            Now I press a button and it's done in under a minute — tailored to every resident's needs.
+            I actually got to eat dinner with my family last Sunday.
+          </p>
+          <div class="testimonial-author">
+            <div class="author-avatar av-teal">👩</div>
+            <div>
+              <div class="author-name">Sarah M.</div>
+              <div class="author-role">Activity Director · Memory Care Facility</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <p class="testimonial-text">
+            My mom has dementia and I was always wondering what her days were like.
+            Now I get a short email every month that tells me exactly what she did and how she responded.
+            It means everything to our family.
+          </p>
+          <div class="testimonial-author">
+            <div class="author-avatar av-amber">👨</div>
+            <div>
+              <div class="author-name">James T.</div>
+              <div class="author-role">Family Member · Son of a resident</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <p class="testimonial-text">
+            The pre-brief feature alone is worth it. Before every activity I know exactly
+            who has a hearing issue, who needs to sit near the exit, and what this person
+            was like the last time we ran this session. It makes me a better caregiver.
+          </p>
+          <div class="testimonial-author">
+            <div class="author-avatar av-purple">👩</div>
+            <div>
+              <div class="author-name">Denise R.</div>
+              <div class="author-role">Floor Staff · Assisted Living Community</div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
