@@ -124,18 +124,26 @@ h1, h2, h3 {
 /* Streamlit buttons */
 .stButton > button {
     font-family: 'DM Sans', sans-serif !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     border-radius: 10px !important;
     transition: all 0.2s ease !important;
     background: var(--ap-surface-2) !important;
     color: var(--ap-text) !important;
     border: 1px solid var(--ap-border) !important;
 }
+/* Sidebar buttons: override the dim wildcard color with true white */
+[data-testid="stSidebar"] .stButton > button {
+    color: rgba(255,255,255,0.9) !important;
+    font-weight: 600 !important;
+}
 .stButton > button:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 12px var(--ap-shadow) !important;
     border-color: var(--ap-primary) !important;
     color: var(--ap-primary) !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    color: var(--ap-sidebar-active) !important;
 }
 .stButton > button[kind="primary"] {
     background: var(--ap-primary) !important;
@@ -144,6 +152,9 @@ h1, h2, h3 {
 }
 .stButton > button[kind="primary"]:hover {
     background: var(--ap-primary-dark) !important;
+    color: white !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="primary"] {
     color: white !important;
 }
 
