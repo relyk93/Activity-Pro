@@ -1,8 +1,24 @@
 import sqlite3
 import os
+import hashlib
 from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'activitypro.db')
+PHOTOS_DIR = os.path.join(os.path.dirname(__file__), '..', 'photos')
+
+def _hash_password(password: str) -> str:
+    salt = os.urandom(16)
+    key = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100_000)
+    return salt.hex() + ':' + key.hex()
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        salt_hex, key_hex = stored.split(':')
+        salt = bytes.fromhex(salt_hex)
+        key = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100_000)
+        return key.hex() == key_hex
+    except Exception:
+        return False
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
@@ -88,6 +104,41 @@ def init_db():
         value TEXT
     )''')
 
+    # Staff accounts
+    c.execute('''CREATE TABLE IF NOT EXISTS staff (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'staff',
+        full_name TEXT,
+        active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # Activity photos
+    c.execute('''CREATE TABLE IF NOT EXISTS activity_photos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER,
+        resident_id INTEGER,
+        filename TEXT NOT NULL,
+        caption TEXT,
+        staff_id INTEGER,
+        taken_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES calendar_events(id),
+        FOREIGN KEY (resident_id) REFERENCES residents(id),
+        FOREIGN KEY (staff_id) REFERENCES staff(id)
+    )''')
+
+    # EHR sync columns (added via ALTER if not present)
+    try:
+        c.execute("ALTER TABLE residents ADD COLUMN ehr_id TEXT")
+    except Exception:
+        pass
+    try:
+        c.execute("ALTER TABLE residents ADD COLUMN ehr_provider TEXT")
+    except Exception:
+        pass
+
     # Subscription
     c.execute('''CREATE TABLE IF NOT EXISTS subscription (
         id INTEGER PRIMARY KEY,
@@ -103,6 +154,14 @@ def init_db():
     if c.fetchone()[0] == 0:
         c.execute("INSERT INTO subscription (tier, facility_name, resident_limit) VALUES ('pro', 'Sunrise Senior Living', 999)")
 
+    # Seed default staff accounts
+    c.execute("SELECT COUNT(*) FROM staff")
+    if c.fetchone()[0] == 0:
+        _seed_staff(c)
+
+    # Ensure photos directory exists
+    os.makedirs(PHOTOS_DIR, exist_ok=True)
+
     # Seed sample activities
     c.execute("SELECT COUNT(*) FROM activities")
     if c.fetchone()[0] == 0:
@@ -115,6 +174,15 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+def _seed_staff(c):
+    accounts = [
+        ("director", _hash_password("ActivityPro2024!"), "director", "Activity Director"),
+        ("staff1",   _hash_password("Staff2024!"),       "staff",    "Floor Staff"),
+    ]
+    for username, pw_hash, role, full_name in accounts:
+        c.execute("INSERT INTO staff (username, password_hash, role, full_name) VALUES (?,?,?,?)",
+                  (username, pw_hash, role, full_name))
 
 def _seed_activities(c):
     activities = [
@@ -365,5 +433,102 @@ def update_subscription(tier, facility_name=None):
                  (tier, limits.get(tier, 15)))
     if facility_name:
         conn.execute("UPDATE subscription SET facility_name=? WHERE id=1", (facility_name,))
+    conn.commit()
+    conn.close()
+
+# ---- Staff CRUD ----
+
+def authenticate_staff(username: str, password: str):
+    """Returns staff dict on success, None on failure."""
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM staff WHERE username=? AND active=1", (username,)
+    ).fetchone()
+    conn.close()
+    if row and _verify_password(password, row['password_hash']):
+        return dict(row)
+    return None
+
+def get_all_staff():
+    conn = get_conn()
+    rows = conn.execute("SELECT id, username, role, full_name, active, created_at FROM staff ORDER BY role, full_name").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def create_staff(username: str, password: str, role: str, full_name: str):
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO staff (username, password_hash, role, full_name) VALUES (?,?,?,?)",
+        (username, _hash_password(password), role, full_name)
+    )
+    conn.commit()
+    conn.close()
+
+def update_staff(staff_id: int, full_name: str, role: str, new_password: str = None):
+    conn = get_conn()
+    if new_password:
+        conn.execute(
+            "UPDATE staff SET full_name=?, role=?, password_hash=? WHERE id=?",
+            (full_name, role, _hash_password(new_password), staff_id)
+        )
+    else:
+        conn.execute(
+            "UPDATE staff SET full_name=?, role=? WHERE id=?",
+            (full_name, role, staff_id)
+        )
+    conn.commit()
+    conn.close()
+
+def deactivate_staff(staff_id: int):
+    conn = get_conn()
+    conn.execute("UPDATE staff SET active=0 WHERE id=?", (staff_id,))
+    conn.commit()
+    conn.close()
+
+# ---- Photo CRUD ----
+
+def save_photo(event_id: int, resident_id: int, filename: str, caption: str, staff_id: int):
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO activity_photos (event_id, resident_id, filename, caption, staff_id) VALUES (?,?,?,?,?)",
+        (event_id, resident_id, filename, caption, staff_id)
+    )
+    conn.commit()
+    conn.close()
+
+def get_photos(event_id: int = None, resident_id: int = None):
+    conn = get_conn()
+    q = "SELECT * FROM activity_photos WHERE 1=1"
+    params = []
+    if event_id:
+        q += " AND event_id=?"
+        params.append(event_id)
+    if resident_id:
+        q += " AND resident_id=?"
+        params.append(resident_id)
+    q += " ORDER BY taken_at DESC"
+    rows = conn.execute(q, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def delete_photo(photo_id: int):
+    conn = get_conn()
+    row = conn.execute("SELECT filename FROM activity_photos WHERE id=?", (photo_id,)).fetchone()
+    if row:
+        path = os.path.join(PHOTOS_DIR, row['filename'])
+        if os.path.exists(path):
+            os.remove(path)
+        conn.execute("DELETE FROM activity_photos WHERE id=?", (photo_id,))
+    conn.commit()
+    conn.close()
+
+# ---- Resident EHR helpers ----
+
+def update_resident_ehr(resident_id: int, ehr_id: str, ehr_provider: str):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE residents SET ehr_id=?, ehr_provider=? WHERE id=?",
+        (ehr_id, ehr_provider, resident_id)
+    )
     conn.commit()
     conn.close()

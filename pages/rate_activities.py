@@ -1,6 +1,9 @@
 import streamlit as st
-from utils.database import get_events, get_residents, save_engagement, get_engagements
+from utils.database import get_events, get_residents, save_engagement, get_engagements, save_photo, get_photos, delete_photo, PHOTOS_DIR
+from utils.auth import get_current_staff
 from datetime import date, timedelta
+import os
+import uuid
 
 MOOD_LABELS = {1: "😔 Very Low", 2: "😕 Low", 3: "😐 Neutral", 4: "🙂 Good", 5: "😊 Great"}
 
@@ -135,6 +138,48 @@ def show():
                 save_engagement(eng)
             st.success(f"✅ Saved engagement records for {len(engagement_data)} residents!")
             st.balloons()
+
+        # ── Photo Documentation ──
+        st.markdown("---")
+        st.markdown("#### 📸 Session Photos")
+        st.markdown("<div style='color:#718096; font-size:0.85rem; margin-bottom:12px;'>Upload photos from this session for documentation and family updates.</div>", unsafe_allow_html=True)
+
+        # Existing photos
+        existing_photos = get_photos(event_id=ev['id'])
+        if existing_photos:
+            photo_cols = st.columns(min(len(existing_photos), 4))
+            for i, photo in enumerate(existing_photos):
+                photo_path = os.path.join(PHOTOS_DIR, photo['filename'])
+                if os.path.exists(photo_path):
+                    with photo_cols[i % 4]:
+                        st.image(photo_path, use_container_width=True)
+                        caption = photo.get('caption') or ''
+                        if caption:
+                            st.caption(caption)
+                        if st.button("🗑️", key=f"del_photo_{photo['id']}", help="Delete photo"):
+                            delete_photo(photo['id'])
+                            st.rerun()
+
+        # Upload new photos
+        staff = get_current_staff()
+        uploaded = st.file_uploader(
+            "Add photos (JPG, PNG)",
+            type=["jpg", "jpeg", "png"],
+            accept_multiple_files=True,
+            key=f"photo_upload_{ev['id']}"
+        )
+        if uploaded:
+            photo_caption = st.text_input("Caption for all uploaded photos (optional)", key=f"photo_caption_{ev['id']}")
+            if st.button("📤 Save Photos", key=f"save_photos_{ev['id']}"):
+                for f in uploaded:
+                    ext = f.name.rsplit('.', 1)[-1].lower()
+                    filename = f"{uuid.uuid4().hex}.{ext}"
+                    dest = os.path.join(PHOTOS_DIR, filename)
+                    with open(dest, 'wb') as out:
+                        out.write(f.read())
+                    save_photo(ev['id'], None, filename, photo_caption, staff.get('id'))
+                st.success(f"✅ {len(uploaded)} photo(s) saved.")
+                st.rerun()
 
     with tab2:
         st.markdown("### 📊 Engagement Summary by Resident")

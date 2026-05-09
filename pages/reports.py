@@ -2,6 +2,8 @@ import streamlit as st
 from utils.auth import require_pro
 from utils.database import get_residents, get_engagements, get_events
 from datetime import date, timedelta
+import plotly.graph_objects as go
+import plotly.express as px
 
 def show():
     st.markdown("# 📊 Reports & Analytics")
@@ -11,7 +13,7 @@ def show():
 
     st.markdown("<div style='color:#718096; margin-bottom:20px;'>Generate participation reports for care planning, family updates, and administration.</div>", unsafe_allow_html=True)
 
-    tab1, tab2, tab3 = st.tabs(["📋 Resident Report", "📅 Monthly Summary", "🏆 Activity Effectiveness"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 Resident Report", "📅 Monthly Summary", "🏆 Activity Effectiveness", "📈 Trend Charts"])
 
     # ─── Tab 1: Resident Report ───
     with tab1:
@@ -198,3 +200,118 @@ def show():
                 """, unsafe_allow_html=True)
         else:
             st.info("Rate some activities to see effectiveness rankings here!")
+
+    # ─── Tab 4: Trend Charts ───
+    with tab4:
+        st.markdown("### 📈 Mood & Engagement Trends")
+
+        all_engs = get_engagements()
+        residents = get_residents()
+        resident_map = {r['id']: r['name'] for r in residents}
+
+        if not all_engs:
+            st.info("No engagement data yet. Start rating activities to see trends here.")
+        else:
+            # ── Mood over time per resident ──
+            st.markdown("#### Mood Over Time")
+            selected_resident = st.selectbox(
+                "Select resident for mood trend",
+                options=[r['id'] for r in residents],
+                format_func=lambda rid: resident_map[rid],
+                key="trend_resident"
+            )
+            resident_engs = [e for e in all_engs if e['resident_id'] == selected_resident
+                             and e.get('mood_before') and e.get('mood_after')]
+
+            if resident_engs:
+                dates = [e['event_date'] for e in resident_engs]
+                mood_before = [e['mood_before'] for e in resident_engs]
+                mood_after  = [e['mood_after']  for e in resident_engs]
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=dates, y=mood_before, mode='lines+markers',
+                    name='Mood Before', line=dict(color='#9B8EC4', width=2),
+                    marker=dict(size=8)
+                ))
+                fig.add_trace(go.Scatter(
+                    x=dates, y=mood_after, mode='lines+markers',
+                    name='Mood After', line=dict(color='#7C9A7E', width=2),
+                    marker=dict(size=8)
+                ))
+                fig.update_layout(
+                    yaxis=dict(tickvals=[1,2,3,4,5],
+                               ticktext=["😔 Very Low","😕 Low","😐 Neutral","🙂 Good","😊 Great"],
+                               range=[0.5, 5.5]),
+                    xaxis_title="Session Date",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                    margin=dict(l=20, r=20, t=40, b=20),
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    height=320
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info(f"No mood data for {resident_map[selected_resident]} yet.")
+
+            st.markdown("---")
+
+            # ── Engagement rate by day of week ──
+            st.markdown("#### Engagement by Day of Week")
+            from datetime import datetime as dt
+            day_stats = {d: {"total": 0, "engaged": 0} for d in ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]}
+            day_order = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+            for e in all_engs:
+                try:
+                    dow = dt.strptime(e['event_date'], "%Y-%m-%d").strftime("%a")
+                    day_stats[dow]["total"] += 1
+                    if e['engaged']:
+                        day_stats[dow]["engaged"] += 1
+                except Exception:
+                    pass
+
+            days = [d for d in day_order if day_stats[d]["total"] > 0]
+            rates = [int(day_stats[d]["engaged"] / day_stats[d]["total"] * 100) if day_stats[d]["total"] else 0 for d in days]
+
+            if days:
+                fig2 = go.Figure(go.Bar(
+                    x=days, y=rates,
+                    marker_color=['#7C9A7E' if r >= 70 else '#D4A843' if r >= 40 else '#C47B5A' for r in rates],
+                    text=[f"{r}%" for r in rates],
+                    textposition='outside'
+                ))
+                fig2.update_layout(
+                    yaxis=dict(title="Engagement Rate (%)", range=[0, 110]),
+                    xaxis_title="Day of Week",
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    height=280
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+            st.markdown("---")
+
+            # ── Activity category breakdown (pie) ──
+            st.markdown("#### Sessions by Category")
+            events = get_events()
+            cat_counts = {}
+            for ev in events:
+                cat = ev.get('category', 'social') or 'social'
+                cat_counts[cat] = cat_counts.get(cat, 0) + 1
+
+            if cat_counts:
+                colors = {'physical':'#DEF0DE','cognitive':'#DDE8F5','social':'#F5DDDE',
+                          'creative':'#F5EDDD','mindful':'#EBE4F5'}
+                fig3 = px.pie(
+                    names=list(cat_counts.keys()),
+                    values=list(cat_counts.values()),
+                    color=list(cat_counts.keys()),
+                    color_discrete_map=colors
+                )
+                fig3.update_layout(
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    height=300
+                )
+                st.plotly_chart(fig3, use_container_width=True)

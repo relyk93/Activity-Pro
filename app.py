@@ -1,6 +1,6 @@
 import streamlit as st
 from utils.database import init_db
-from utils.auth import check_subscription
+from utils.auth import check_subscription, is_logged_in, get_current_staff, logout_staff, is_director
 
 st.set_page_config(
     page_title="ActivityPro — Senior Care Calendar",
@@ -12,6 +12,12 @@ st.set_page_config(
 # Initialize database
 init_db()
 check_subscription()
+
+# Login gate — show login page if not authenticated
+if not is_logged_in():
+    from pages.login import show as show_login
+    show_login()
+    st.stop()
 
 # Custom CSS
 st.markdown("""
@@ -201,16 +207,20 @@ with st.sidebar:
     sub = st.session_state.subscription
     badge_map = {"free": "sub-badge-free", "pro": "sub-badge-pro", "enterprise": "sub-badge-enterprise"}
     badge_label = {"free": "FREE TIER", "pro": "⭐ PRO", "enterprise": "🏢 ENTERPRISE"}
+    staff = get_current_staff()
+    role_label = "Director" if staff.get("role") == "director" else "Floor Staff"
     st.markdown(f"""
     <div style='text-align:center; margin-bottom: 20px;'>
         <span class='{badge_map.get(sub, "sub-badge-free")}'>{badge_label.get(sub, "FREE")}</span>
         <div style='font-size:0.75rem; color:#718096; margin-top:6px;'>{st.session_state.facility_name}</div>
+        <div style='font-size:0.72rem; color:#A0AEC0; margin-top:4px;'>👤 {staff.get("full_name","?")} · {role_label}</div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    pages = {
+    # Directors see all pages; Floor Staff see a limited set
+    all_pages = {
         "🏠 Dashboard": "Dashboard",
         "📅 Calendar": "Calendar",
         "🤖 AI Activity Generator": "AI Generator",
@@ -221,14 +231,27 @@ with st.sidebar:
         "🔔 Notifications": "Notifications",
         "⚙️ Settings": "Settings",
         "💳 Subscription": "Subscription",
+        "👤 Staff Management": "Staff Management",
     }
+    staff_pages = {
+        "🏠 Dashboard": "Dashboard",
+        "📅 Calendar": "Calendar",
+        "⭐ Rate Activities": "Rate Activities",
+        "👥 Residents": "Residents",
+    }
+    pages = all_pages if is_director() else staff_pages
 
     for label, page_key in pages.items():
         if st.button(label, key=f"nav_{page_key}", use_container_width=True):
             st.session_state.page = page_key
 
+    st.markdown("---")
+    if st.button("🚪 Log Out", key="nav_logout", use_container_width=True):
+        logout_staff()
+        st.rerun()
+
     # Lock indicators for free tier
-    if st.session_state.subscription == "free":
+    if st.session_state.subscription == "free" and is_director():
         st.markdown("""
         <div style='margin-top: 20px; padding: 12px; background: rgba(212,168,67,0.15); border-radius: 10px; border: 1px solid rgba(212,168,67,0.3);'>
             <div style='font-size: 0.75rem; color: #D4A843; font-weight: 600;'>🔒 Upgrade to Pro</div>
@@ -268,4 +291,7 @@ elif page == "Settings":
     show()
 elif page == "Subscription":
     from pages.subscription import show
+    show()
+elif page == "Staff Management":
+    from pages.staff_management import show
     show()

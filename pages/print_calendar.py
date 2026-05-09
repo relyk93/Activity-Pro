@@ -1,7 +1,6 @@
 import streamlit as st
-from utils.database import get_events, get_subscription
-from utils.pdf_export import build_weekly_calendar_html, build_resident_report_html
-from utils.database import get_residents, get_engagements
+from utils.database import get_events, get_subscription, get_residents, get_engagements
+from utils.pdf_export import build_weekly_calendar_html, build_resident_report_html, build_resident_report_pdf
 from datetime import date, timedelta
 import base64
 
@@ -124,27 +123,43 @@ def show():
             avg_r = round(sum(e.get('rating') or 0 for e in engs)/total,1) if total else 0
             st.markdown(f"""<div class='metric-box'><div class='metric-number'>{avg_r}⭐</div><div class='metric-label'>Avg Rating</div></div>""", unsafe_allow_html=True)
 
-        if st.button(f"🖨️ Generate Report for {selected_name}", type="primary", use_container_width=True):
-            html = build_resident_report_html(resident, engs, facility_name)
-            b64 = base64.b64encode(html.encode()).decode()
-            safe_name = selected_name.replace(' ', '_')
-            filename = f"ActivityPro_Report_{safe_name}_{date.today().strftime('%Y-%m-%d')}.html"
+        col_pdf, col_html = st.columns(2)
 
-            st.markdown(f"""
-            <div class='ap-card ap-card-sage' style='text-align:center; padding:32px;'>
-                <div style='font-size:2.5rem; margin-bottom:12px;'>✅</div>
-                <div style='font-size:1.1rem; font-weight:600; margin-bottom:8px;'>Report ready for {selected_name}!</div>
-                <div style='color:#718096; margin-bottom:20px; font-size:0.9rem;'>
-                    Download, open in browser, then print with <strong>Ctrl+P / Cmd+P</strong>.<br>
-                    This report is suitable for care plan documentation and family sharing.
+        with col_pdf:
+            if st.button(f"⬇️ Download PDF Report", type="primary", use_container_width=True):
+                safe_name = selected_name.replace(' ', '_')
+                pdf_bytes = build_resident_report_pdf(resident, engs, facility_name)
+                if pdf_bytes:
+                    st.download_button(
+                        label="📄 Save PDF",
+                        data=pdf_bytes,
+                        file_name=f"ActivityPro_Report_{safe_name}_{date.today().strftime('%Y-%m-%d')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ Clinical PDF ready — no browser printing needed.")
+                else:
+                    st.warning("reportlab not installed. Run `pip install reportlab` to enable PDF export. Falling back to HTML below.")
+                    html = build_resident_report_html(resident, engs, facility_name)
+                    b64 = base64.b64encode(html.encode()).decode()
+                    filename = f"ActivityPro_Report_{safe_name}_{date.today().strftime('%Y-%m-%d')}.html"
+                    st.markdown(f'<a href="data:text/html;base64,{b64}" download="{filename}" style="background:#4A6B4C;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">⬇️ Download HTML Report</a>', unsafe_allow_html=True)
+
+        with col_html:
+            if st.button("🌐 Download HTML Report", use_container_width=True):
+                html = build_resident_report_html(resident, engs, facility_name)
+                b64 = base64.b64encode(html.encode()).decode()
+                safe_name = selected_name.replace(' ', '_')
+                filename = f"ActivityPro_Report_{safe_name}_{date.today().strftime('%Y-%m-%d')}.html"
+                st.markdown(f"""
+                <div class='ap-card ap-card-sky' style='text-align:center; padding:20px;'>
+                    <a href="data:text/html;base64,{b64}" download="{filename}"
+                       style='background:#6BA3BE; color:white; padding:10px 24px; border-radius:8px;
+                              text-decoration:none; font-weight:600; display:inline-block;'>
+                        ⬇️ Download HTML (print in browser)
+                    </a>
                 </div>
-                <a href="data:text/html;base64,{b64}" download="{filename}"
-                   style='background:#4A6B4C; color:white; padding:12px 28px; border-radius:10px;
-                          text-decoration:none; font-weight:600; font-size:1rem; display:inline-block;'>
-                    ⬇️ Download Report
-                </a>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
         if not engs:
             st.warning(f"No engagement records found for {selected_name}. Rate some activities first to populate the report.")

@@ -43,5 +43,10 @@ exports/
 *.zip
 *.tmp
 
+# Session photos (stored locally, not committed)
+photos/*.jpg
+photos/*.jpeg
+photos/*.png
+
 # Node (if frontend added later)
 node_modules/
