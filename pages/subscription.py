@@ -1,126 +1,192 @@
 import streamlit as st
-from utils.database import get_subscription, update_subscription
+from utils.database import get_subscription, update_subscription, activate_stripe_subscription
+from utils.stripe_utils import (
+    stripe_configured, create_checkout_session,
+    verify_checkout_session, create_portal_session
+)
+
+def _app_url() -> str:
+    try:
+        return st.secrets.get("APP_URL", "http://localhost:8501")
+    except Exception:
+        return "http://localhost:8501"
 
 def show():
-    st.markdown("# 💳 Subscription")
-    st.markdown("<div style='color:#718096; margin-bottom:24px;'>Choose the plan that's right for your facility.</div>", unsafe_allow_html=True)
-
     sub = get_subscription()
     current_tier = sub.get('tier', 'free')
+    stripe_customer_id = sub.get('stripe_customer_id', '')
 
-    # Pricing cards
-    col1, col2, col3 = st.columns(3)
+    # ── Handle Stripe redirect back to app ──
+    params = st.query_params
+    if params.get("stripe_success") and params.get("session_id"):
+        session_id = params["session_id"]
+        with st.spinner("Confirming your payment..."):
+            info = verify_checkout_session(session_id)
+        if info:
+            activate_stripe_subscription(info["stripe_customer_id"], info["stripe_subscription_id"])
+            st.session_state.subscription = "professional"
+            st.query_params.clear()
+            st.success("Payment confirmed! Your Professional plan is now active.")
+            st.rerun()
+        else:
+            st.warning("Could not verify payment — please contact support.")
+            st.query_params.clear()
 
-    with col1:
-        is_current = current_tier == "free"
-        st.markdown(f"""
-        <div class='ap-card' style='border: {"2px solid #7C9A7E" if is_current else "1px solid #E2DDD6"}; text-align:center;'>
-            <div style='font-size:1.5rem; margin-bottom:8px;'>🌱</div>
-            <h3 style='margin:0;'>Free</h3>
-            <div style='font-size:2rem; font-weight:700; color:#1A2332; margin:12px 0;'>$0<span style='font-size:1rem; font-weight:400; color:#718096;'>/mo</span></div>
-            <div style='font-size:0.85rem; color:#4A5568; text-align:left; margin-bottom:20px;'>
-                ✅ Up to 15 residents<br>
-                ✅ Basic calendar<br>
-                ✅ Activity library<br>
-                ✅ Activity directions<br>
-                ✅ Basic engagement rating<br>
-                ❌ AI calendar generation<br>
-                ❌ Mood tracking<br>
-                ❌ Reports & analytics<br>
-                ❌ Disability personalization
-            </div>
-            {'<div style="background:#7C9A7E; color:white; padding:8px; border-radius:8px; font-weight:600;">Current Plan</div>' if is_current else ''}
+    if params.get("stripe_cancelled"):
+        st.info("Checkout was cancelled — no charge was made.")
+        st.query_params.clear()
+
+    # ── Page header ──
+    st.markdown("# 💳 Subscription")
+
+    tier_labels = {
+        "free":         ("Demo", "var(--ap-text-light)"),
+        "professional": ("Professional", "var(--ap-primary)"),
+        "pro":          ("Professional", "var(--ap-primary)"),
+        "enterprise":   ("Enterprise", "var(--ap-accent)"),
+    }
+    label, color = tier_labels.get(current_tier, ("Demo", "var(--ap-text-light)"))
+    st.markdown(f"""
+    <div class='ap-card' style='display:flex; align-items:center; gap:16px; margin-bottom:8px;'>
+        <div>
+            <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em;
+                        color:var(--ap-text-light); margin-bottom:4px;'>Current Plan</div>
+            <div style='font-size:1.5rem; font-weight:700; color:{color};'>{label}</div>
         </div>
-        """, unsafe_allow_html=True)
-        if not is_current:
-            if st.button("Switch to Free", use_container_width=True, key="btn_free"):
-                update_subscription("free")
-                st.session_state.subscription = "free"
-                st.success("Switched to Free tier.")
-                st.rerun()
-
-    with col2:
-        is_current = current_tier == "pro"
-        st.markdown(f"""
-        <div class='ap-card' style='border: {"2px solid #D4A843" if is_current else "1px solid #E2DDD6"}; text-align:center; background: {"linear-gradient(135deg,#FFFBE8,#FFFFF5)" if is_current else "#FFFDF9"};'>
-            <div style='font-size:1.5rem; margin-bottom:8px;'>⭐</div>
-            <h3 style='margin:0;'>Pro</h3>
-            <div style='font-size:2rem; font-weight:700; color:#1A2332; margin:12px 0;'>$29<span style='font-size:1rem; font-weight:400; color:#718096;'>/mo</span></div>
-            <div style='font-size:0.85rem; color:#4A5568; text-align:left; margin-bottom:20px;'>
-                ✅ Unlimited residents<br>
-                ✅ Everything in Free<br>
-                ✅ <strong>AI calendar generation</strong><br>
-                ✅ Mood tracking (before/after)<br>
-                ✅ Full reports & analytics<br>
-                ✅ Disability-aware AI activities<br>
-                ✅ Personalized resident activities<br>
-                ✅ Birthday awareness<br>
-                ✅ Care plan summaries<br>
-                ✅ Activity effectiveness ranking<br>
-                ❌ Multi-facility management
-            </div>
-            {'<div style="background:#D4A843; color:#5A3A00; padding:8px; border-radius:8px; font-weight:600;">Current Plan ✓</div>' if is_current else ''}
+        <div style='margin-left:auto; font-size:0.85rem; color:var(--ap-text-light);'>
+            {sub.get('facility_name','My Facility')}
         </div>
-        """, unsafe_allow_html=True)
-        if not is_current:
-            if st.button("⭐ Upgrade to Pro — $29/mo", type="primary", use_container_width=True, key="btn_pro"):
-                update_subscription("pro")
-                st.session_state.subscription = "pro"
-                st.success("✅ Upgraded to Pro! All features unlocked.")
-                st.rerun()
-
-    with col3:
-        is_current = current_tier == "enterprise"
-        st.markdown(f"""
-        <div class='ap-card' style='border: {"2px solid #7C9A7E" if is_current else "1px solid #E2DDD6"}; text-align:center;'>
-            <div style='font-size:1.5rem; margin-bottom:8px;'>🏢</div>
-            <h3 style='margin:0;'>Enterprise</h3>
-            <div style='font-size:2rem; font-weight:700; color:#1A2332; margin:12px 0;'>$79<span style='font-size:1rem; font-weight:400; color:#718096;'>/mo</span></div>
-            <div style='font-size:0.85rem; color:#4A5568; text-align:left; margin-bottom:20px;'>
-                ✅ Everything in Pro<br>
-                ✅ Multi-facility management<br>
-                ✅ Facility comparison reports<br>
-                ✅ Multilingual support<br>
-                ✅ API access<br>
-                ✅ Priority support<br>
-                ✅ Onboarding & training<br>
-                ✅ Custom branding<br>
-                ✅ HIPAA-compliant cloud backup<br>
-                ✅ Dedicated account manager
-            </div>
-            {'<div style="background:#7C9A7E; color:white; padding:8px; border-radius:8px; font-weight:600;">Current Plan ✓</div>' if is_current else ''}
-        </div>
-        """, unsafe_allow_html=True)
-        if not is_current:
-            if st.button("🏢 Upgrade to Enterprise — $79/mo", use_container_width=True, key="btn_enterprise"):
-                update_subscription("enterprise")
-                st.session_state.subscription = "enterprise"
-                st.success("✅ Upgraded to Enterprise!")
-                st.rerun()
-
-    st.markdown("---")
-    st.markdown("""
-    <div style='text-align:center; color:#A0AEC0; font-size:0.85rem;'>
-        🔒 Secure billing powered by Stripe &nbsp;|&nbsp; Cancel anytime &nbsp;|&nbsp; 14-day free trial on all paid plans<br>
-        📧 Questions? Contact us at <strong>support@activitypro.app</strong>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("### 🌍 Used Worldwide")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Plan cards ──
+    col1, col2, col3 = st.columns(3)
+
+    # DEMO
+    with col1:
+        is_current = current_tier in ("free",)
+        st.markdown(f"""
+        <div class='ap-card' style='border:{"2px solid var(--ap-primary)" if is_current else "1px solid var(--ap-border)"};
+             text-align:center; height:100%;'>
+            <div style='font-size:0.75rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+                        color:var(--ap-text-light); margin-bottom:8px;'>Demo</div>
+            <div style='font-size:2.4rem; font-weight:700; color:var(--ap-text); margin-bottom:4px;'>Free</div>
+            <div style='font-size:0.82rem; color:var(--ap-text-light); margin-bottom:20px;'>No time limit</div>
+            <hr style='border-color:var(--ap-border); margin-bottom:16px;'>
+            <div style='font-size:0.85rem; color:var(--ap-text-mid); text-align:left; line-height:2;'>
+                ✓ Up to 15 residents<br>
+                ✓ Full activity calendar<br>
+                ✓ 12-activity library<br>
+                ✓ Engagement tracking<br>
+                ✓ Resident Quick Cards<br>
+                ✓ Session Pre-Brief<br>
+                ✓ Staff logins & roles<br>
+                — AI generation<br>
+                — Analytics & reports<br>
+                — Family email updates
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        if is_current:
+            st.success("Current plan", icon="✓")
+        else:
+            if st.button("Switch to Demo", use_container_width=True, key="btn_free"):
+                update_subscription("free")
+                st.session_state.subscription = "free"
+                st.rerun()
+
+    # PROFESSIONAL
+    with col2:
+        is_current = current_tier in ("pro", "professional")
+        stripe_ready = stripe_configured()
+        st.markdown(f"""
+        <div class='ap-card' style='border:{"2px solid var(--ap-primary)" if is_current else "2px solid var(--ap-primary)"};
+             box-shadow: 0 8px 32px rgba(15,118,110,0.15); text-align:center; height:100%;'>
+            <div style='font-size:0.75rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+                        color:var(--ap-primary); margin-bottom:8px;'>Professional</div>
+            <div style='font-size:2.4rem; font-weight:700; color:var(--ap-text); margin-bottom:4px;'>$49</div>
+            <div style='font-size:0.82rem; color:var(--ap-text-light); margin-bottom:20px;'>per month · billed monthly</div>
+            <hr style='border-color:var(--ap-border); margin-bottom:16px;'>
+            <div style='font-size:0.85rem; color:var(--ap-text-mid); text-align:left; line-height:2;'>
+                ✓ <strong>Unlimited residents</strong><br>
+                ✓ Everything in Demo<br>
+                ✓ <strong>AI activity generation</strong><br>
+                ✓ Mood tracking before & after<br>
+                ✓ Trend charts & analytics<br>
+                ✓ Clinical PDF reports<br>
+                ✓ Family email updates<br>
+                ✓ Photo documentation<br>
+                ✓ Smart daily briefing<br>
+                ✓ 19 disability types
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if is_current:
+            st.success("Current plan", icon="✓")
+            if stripe_customer_id:
+                if st.button("Manage Billing →", use_container_width=True, key="btn_portal"):
+                    url = create_portal_session(stripe_customer_id, _app_url())
+                    if url:
+                        st.markdown(f'<meta http-equiv="refresh" content="0; url={url}">', unsafe_allow_html=True)
+                    else:
+                        st.error("Could not open billing portal.")
+        else:
+            if stripe_ready:
+                if st.button("Upgrade to Professional →", type="primary", use_container_width=True, key="btn_pro"):
+                    url = create_checkout_session(
+                        sub.get("facility_name", "My Facility"),
+                        sub.get("admin_email", ""),
+                        _app_url()
+                    )
+                    if url:
+                        st.markdown(f'<meta http-equiv="refresh" content="0; url={url}">', unsafe_allow_html=True)
+            else:
+                st.button("Upgrade to Professional →", type="primary",
+                          use_container_width=True, key="btn_pro_disabled", disabled=True)
+                st.caption("Add STRIPE_SECRET_KEY + STRIPE_PRICE_ID to secrets.toml to enable payments.")
+
+    # ENTERPRISE
+    with col3:
+        is_current = current_tier == "enterprise"
+        st.markdown(f"""
+        <div class='ap-card' style='border:{"2px solid var(--ap-accent)" if is_current else "1px solid var(--ap-border)"};
+             text-align:center; height:100%;'>
+            <div style='font-size:0.75rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+                        color:var(--ap-accent); margin-bottom:8px;'>Enterprise</div>
+            <div style='font-size:2.4rem; font-weight:700; color:var(--ap-text); margin-bottom:4px;'>Custom</div>
+            <div style='font-size:0.82rem; color:var(--ap-text-light); margin-bottom:20px;'>pricing for your organization</div>
+            <hr style='border-color:var(--ap-border); margin-bottom:16px;'>
+            <div style='font-size:0.85rem; color:var(--ap-text-mid); text-align:left; line-height:2;'>
+                ✓ Everything in Professional<br>
+                ✓ <strong>Multi-facility management</strong><br>
+                ✓ EHR integration (PCC, MatrixCare)<br>
+                ✓ HIPAA-compliant cloud backup<br>
+                ✓ Facility comparison reports<br>
+                ✓ White-label & custom branding<br>
+                ✓ API access<br>
+                ✓ Dedicated account manager<br>
+                ✓ Custom onboarding & training<br>
+                ✓ Revenue share / royalty options
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        if is_current:
+            st.success("Current plan", icon="✓")
+        else:
+            st.link_button(
+                "Contact Us →",
+                "mailto:kyl3rking@gmail.com?subject=ActivityPro%20Enterprise%20Inquiry",
+                use_container_width=True,
+            )
+
+    # ── Footer ──
+    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
-    <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:16px;'>
-        <div class='ap-card' style='text-align:center;'>
-            <div style='font-size:2rem; font-weight:700; color:#7C9A7E;'>2,400+</div>
-            <div style='color:#718096; font-size:0.85rem;'>Activity Directors</div>
-        </div>
-        <div class='ap-card' style='text-align:center;'>
-            <div style='font-size:2rem; font-weight:700; color:#7C9A7E;'>48</div>
-            <div style='color:#718096; font-size:0.85rem;'>Countries</div>
-        </div>
-        <div class='ap-card' style='text-align:center;'>
-            <div style='font-size:2rem; font-weight:700; color:#7C9A7E;'>120K+</div>
-            <div style='color:#718096; font-size:0.85rem;'>Residents Served</div>
-        </div>
+    <div style='text-align:center; font-size:0.82rem; color:var(--ap-text-light);'>
+        🔒 Secure billing powered by Stripe &nbsp;·&nbsp; Cancel anytime &nbsp;·&nbsp;
+        Questions? <a href="mailto:kyl3rking@gmail.com" style="color:var(--ap-primary);">kyl3rking@gmail.com</a>
     </div>
     """, unsafe_allow_html=True)

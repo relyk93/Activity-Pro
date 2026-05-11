@@ -153,6 +153,13 @@ def init_db():
         expires_at TEXT
     )''')
 
+    # Add Stripe columns if missing
+    for col in ("stripe_customer_id TEXT", "stripe_subscription_id TEXT"):
+        try:
+            c.execute(f"ALTER TABLE subscription ADD COLUMN {col}")
+        except Exception:
+            pass
+
     # Seed subscription if not exists
     c.execute("SELECT COUNT(*) FROM subscription")
     if c.fetchone()[0] == 0:
@@ -539,11 +546,21 @@ def get_subscription():
 
 def update_subscription(tier, facility_name=None):
     conn = get_conn()
-    limits = {"free": 15, "pro": 999, "enterprise": 9999}
+    limits = {"free": 15, "pro": 999, "professional": 999, "enterprise": 9999}
     conn.execute("UPDATE subscription SET tier=?, resident_limit=? WHERE id=1",
                  (tier, limits.get(tier, 15)))
     if facility_name:
         conn.execute("UPDATE subscription SET facility_name=? WHERE id=1", (facility_name,))
+    conn.commit()
+    conn.close()
+
+def activate_stripe_subscription(stripe_customer_id: str, stripe_subscription_id: str):
+    """Upgrade to Professional after successful Stripe payment."""
+    conn = get_conn()
+    conn.execute("""UPDATE subscription SET
+        tier='professional', resident_limit=999,
+        stripe_customer_id=?, stripe_subscription_id=?
+        WHERE id=1""", (stripe_customer_id, stripe_subscription_id))
     conn.commit()
     conn.close()
 
