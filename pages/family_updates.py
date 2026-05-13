@@ -95,12 +95,23 @@ def show():
                     if st.button(f"👁️ Preview Update", key=f"preview_{r['id']}", use_container_width=True):
                         st.session_state[f"show_preview_{r['id']}"] = True
 
+                    uploaded = st.file_uploader(
+                        "📸 Attach activity photos",
+                        type=["jpg", "jpeg", "png"],
+                        accept_multiple_files=True,
+                        key=f"photos_{r['id']}",
+                        help="Up to 5 photos — embedded inline in the email",
+                    )
+                    if uploaded:
+                        st.caption(f"{len(uploaded)} photo{'s' if len(uploaded) != 1 else ''} ready to attach")
+
                     if has_email and smtp_user:
                         if st.button(f"📤 Send to {r.get('family_name') or 'Family'}",
                                      key=f"send_{r['id']}", type="primary", use_container_width=True):
-                            html_body = build_family_update_html(r, engs, facility_name)
+                            photos = [{"name": f.name, "data": f.read()} for f in (uploaded or [])]
+                            html_body = build_family_update_html(r, engs, facility_name, photos=photos)
                             subject   = f"Activity Update — {r['name']} · {date.today().strftime('%B %Y')}"
-                            ok, msg   = send_email(r['family_email'], subject, html_body)
+                            ok, msg   = send_email(r['family_email'], subject, html_body, attachments=photos)
                             if ok:
                                 mark_family_update_sent(r['id'])
                                 st.success(f"✅ Sent to {r['family_email']}")
@@ -174,7 +185,7 @@ def show():
                 engs = get_engagements(resident_id=r['id'])
                 html_body = build_family_update_html(r, engs, facility_name)
                 subject = f"Activity Update — {r['name']} · {date.today().strftime('%B %Y')}"
-                ok, _ = send_email(r['family_email'], subject, html_body)
+                ok, _ = send_email(r['family_email'], subject, html_body, attachments=[])
                 if ok:
                     mark_family_update_sent(r['id'])
                     sent += 1

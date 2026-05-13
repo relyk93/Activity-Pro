@@ -2,6 +2,7 @@ import smtplib
 import streamlit as st
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from datetime import date
 
 def get_smtp_config():
@@ -17,33 +18,46 @@ def get_smtp_config():
     except Exception:
         return {"host": "", "port": 587, "user": "", "password": "", "from_email": ""}
 
-def send_email(to_email, subject, html_body, plain_body=""):
-    """Send an HTML email. Returns (success: bool, message: str)."""
+def send_email(to_email, subject, html_body, plain_body="", attachments=None):
+    """Send an HTML email with optional inline photo attachments.
+
+    attachments: list of dicts {name: str, data: bytes}
+    Returns (success: bool, message: str).
+    """
     config = get_smtp_config()
     if not config["user"] or not config["password"]:
         return False, "Email not configured. Add SMTP settings to .streamlit/secrets.toml"
 
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = config["from_email"] or config["user"]
-        msg["To"] = to_email
+        # Use multipart/related so inline images (cid:) work in the HTML body
+        outer = MIMEMultipart("related")
+        outer["Subject"] = subject
+        outer["From"] = config["from_email"] or config["user"]
+        outer["To"] = to_email
 
+        alt = MIMEMultipart("alternative")
         if plain_body:
-            msg.attach(MIMEText(plain_body, "plain"))
-        msg.attach(MIMEText(html_body, "html"))
+            alt.attach(MIMEText(plain_body, "plain"))
+        alt.attach(MIMEText(html_body, "html"))
+        outer.attach(alt)
+
+        for i, photo in enumerate(attachments or []):
+            img = MIMEImage(photo["data"])
+            img.add_header("Content-ID", f"<photo_{i}>")
+            img.add_header("Content-Disposition", "inline", filename=photo["name"])
+            outer.attach(img)
 
         with smtplib.SMTP(config["host"], config["port"]) as server:
             server.ehlo()
             server.starttls()
             server.login(config["user"], config["password"])
-            server.sendmail(config["from_email"] or config["user"], to_email, msg.as_string())
+            server.sendmail(config["from_email"] or config["user"], to_email, outer.as_string())
 
         return True, f"Email sent to {to_email}"
     except Exception as e:
         return False, f"Email failed: {str(e)}"
 
-def build_family_update_html(resident, engagements, facility_name="ActivityPro Facility"):
+def build_family_update_html(resident, engagements, facility_name="ActivityPro Facility", photos=None):
     """Build a beautiful HTML family update email."""
     total = len(engagements)
     engaged = sum(1 for e in engagements if e['engaged'])
@@ -68,6 +82,22 @@ def build_family_update_html(resident, engagements, facility_name="ActivityPro F
         </tr>"""
 
     bar_color = "#7C9A7E" if rate >= 70 else "#D4A843" if rate >= 40 else "#C47B5A"
+
+    # Photo gallery section — inline images referenced by cid:
+    photo_gallery = ""
+    if photos:
+        cells = "".join(
+            f"""<td style='padding:4px;'>
+                  <img src='cid:photo_{i}' width='160' height='120'
+                       style='border-radius:8px; object-fit:cover; display:block;'>
+                </td>"""
+            for i, p in enumerate(photos)
+        )
+        photo_gallery = f"""
+    <div style='padding:0 32px 24px;'>
+      <h3 style='color:#1A2332; font-size:16px; margin:0 0 12px; font-weight:600;'>📸 Activity Moments</h3>
+      <table style='border-collapse:collapse;'><tr>{cells}</tr></table>
+    </div>"""
 
     return f"""
 <!DOCTYPE html>
@@ -129,6 +159,8 @@ def build_family_update_html(resident, engagements, facility_name="ActivityPro F
         <tbody>{activity_rows}</tbody>
       </table>
     </div>
+
+    {photo_gallery}
 
     <!-- Footer -->
     <div style='background:#F5F9F5; padding:24px 32px; text-align:center; border-top:1px solid #E2DDD6;'>
