@@ -153,6 +153,21 @@ def init_db():
         expires_at TEXT
     )''')
 
+    # Resident Council meetings
+    c.execute('''CREATE TABLE IF NOT EXISTS council_meetings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        meeting_date TEXT NOT NULL,
+        title TEXT,
+        synopsis TEXT,
+        ideas TEXT,
+        concerns TEXT,
+        action_items TEXT,
+        topics TEXT,
+        attendee_count INTEGER DEFAULT 0,
+        recorded_by TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )''')
+
     # Add Stripe columns if missing
     for col in ("stripe_customer_id TEXT", "stripe_subscription_id TEXT"):
         try:
@@ -604,6 +619,44 @@ def get_resident_interests():
                     if len(clean) > 3:
                         interests.add(clean.title())
     return sorted(interests)
+
+# ---- Resident Council ----
+
+def get_council_meetings():
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT * FROM council_meetings ORDER BY meeting_date DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def save_council_meeting(data: dict) -> int:
+    conn = get_conn()
+    conn.execute("""INSERT INTO council_meetings
+        (meeting_date, title, synopsis, ideas, concerns, action_items, topics, attendee_count, recorded_by)
+        VALUES (:meeting_date, :title, :synopsis, :ideas, :concerns, :action_items, :topics, :attendee_count, :recorded_by)
+    """, data)
+    conn.commit()
+    row_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.close()
+    return row_id
+
+def update_council_meeting(meeting_id: int, data: dict):
+    conn = get_conn()
+    conn.execute("""UPDATE council_meetings SET
+        meeting_date=:meeting_date, title=:title, synopsis=:synopsis,
+        ideas=:ideas, concerns=:concerns, action_items=:action_items,
+        topics=:topics, attendee_count=:attendee_count
+        WHERE id=:id
+    """, {**data, "id": meeting_id})
+    conn.commit()
+    conn.close()
+
+def delete_council_meeting(meeting_id: int):
+    conn = get_conn()
+    conn.execute("DELETE FROM council_meetings WHERE id=?", (meeting_id,))
+    conn.commit()
+    conn.close()
 
 # ---- Staff CRUD ----
 

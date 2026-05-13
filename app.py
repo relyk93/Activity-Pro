@@ -246,6 +246,7 @@ with st.sidebar:
         _nav("📊", "Reports",            "Reports"),
         _nav("🖨️", "Print & Export",    "Print"),
         _nav("👨‍👩‍👧", "Family Updates",  "Family Updates"),
+        _nav("🏛", "Resident Council",    "Resident Council"),
         _nav("🔔", "Notifications",      "Notifications"),
         _nav("⚙️", "Settings",          "Settings"),
         _nav("💳", "Subscription",       "Subscription"),
@@ -318,3 +319,4 @@ elif page == "Staff Management":from pages.staff_management import show; show()
 elif page == "Resident Cards": from pages.resident_cards  import show; show()
 elif page == "Pre-Brief":      from pages.pre_brief       import show; show()
 elif page == "Family Updates": from pages.family_updates  import show; show()
+elif page == "Resident Council": from pages.resident_council import show; show()
