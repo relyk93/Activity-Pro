@@ -9,6 +9,28 @@ from datetime import date, timedelta
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 
+FOCUS_AREAS = [
+    "Physical", "Mindful", "Social", "Cognitive", "Creative",
+    "Photo & Memory", "Music & Movement", "Sensory Stimulation",
+    "Spiritual / Reflective", "Nature & Outdoors", "Culinary",
+    "Intergenerational", "Life Skills", "Reminiscence Therapy",
+    "Pet Therapy", "Art Therapy", "Trivia & Education",
+]
+
+PRESET_INTERESTS = [
+    "Music & Singing", "Gardening & Plants", "Reading & Books",
+    "Crafts & Art", "Cooking & Baking", "Dancing",
+    "Movies & TV", "Sports & Games", "Cards & Board Games",
+    "Photography", "Nature & Birdwatching", "Animals & Pets",
+    "Puzzles & Brain Games", "Poetry & Writing", "Religion & Spirituality",
+    "History & Reminiscing", "Family & Grandchildren", "Travel Memories",
+    "Exercise & Stretching", "Painting & Drawing", "Flower Arranging",
+    "Knitting & Sewing", "Technology & Video Calls", "Storytelling",
+    "Trivia & Quiz Games", "Bingo", "Current Events & News",
+    "Letter Writing", "Jewelry Making", "Woodworking & Carving",
+    "Manicures & Beauty", "Volunteering & Helping Others",
+]
+
 
 def call_claude(prompt, system_prompt):
     try:
@@ -76,29 +98,26 @@ def generate_activity_image(activity_title: str, category: str, description: str
 def _interests_section(residents):
     """Render the resident interests panel and return selected interests."""
     all_interests = get_resident_interests()
-    # Also pull structured interests from special_needs field
-    structured = set()
+    from_profiles = set(all_interests)
     for r in residents:
         if r.get('special_needs'):
             for i in r['special_needs'].split(','):
                 i = i.strip()
                 if i:
-                    structured.add(i.title())
+                    from_profiles.add(i.title())
 
-    combined = sorted(set(all_interests) | structured)
+    profile_list = sorted(from_profiles)
+    all_options  = sorted(from_profiles | set(PRESET_INTERESTS))
+    default      = profile_list[:min(8, len(profile_list))] if profile_list else PRESET_INTERESTS[:6]
 
     st.markdown("**Resident Interest Pool**")
-    st.caption("Pulled from all resident profiles. Select which to prioritise this week.")
-    if combined:
-        selected = st.multiselect(
-            "Focus on these interests",
-            options=combined,
-            default=combined[:min(6, len(combined))],
-            key="interest_pool",
-        )
-    else:
-        selected = []
-        st.info("Add interests to resident profiles to use this feature.")
+    st.caption("Profile interests selected by default. Add any from the full list to expand the week's theme.")
+    selected = st.multiselect(
+        "Focus on these interests",
+        options=all_options,
+        default=default,
+        key="interest_pool",
+    )
     return selected
 
 
@@ -148,7 +167,7 @@ def show():
         with col2:
             focus_areas = st.multiselect(
                 "Focus areas",
-                ["Physical", "Mindful", "Social", "Cognitive", "Creative", "Photo & Memory"],
+                FOCUS_AREAS,
                 default=["Physical", "Mindful", "Social"],
             )
             budget = st.selectbox(
@@ -412,7 +431,7 @@ Return a JSON object with this exact structure:
         with col1:
             category = st.selectbox(
                 "Category",
-                ["Physical", "Mindful", "Social", "Cognitive", "Creative", "Photo & Memory"],
+                FOCUS_AREAS,
             )
             group = st.radio("Group", ["All Residents", "Special Needs Group"])
             duration = st.slider("Duration (minutes)", 15, 120, 45)
@@ -426,8 +445,8 @@ Return a JSON object with this exact structure:
             )
             interest_focus = st.multiselect(
                 "Incorporate these interests",
-                options=all_interests,
-                default=all_interests[:3] if all_interests else [],
+                options=sorted(set(all_interests) | set(PRESET_INTERESTS)),
+                default=all_interests[:3] if all_interests else PRESET_INTERESTS[:3],
             )
 
         extra_notes = st.text_area(

@@ -32,11 +32,11 @@ THEMES: dict[str, dict[str, str]] = {
         "--ap-border":        "#E2E8F0",
         "--ap-shadow":        "rgba(15,23,42,0.08)",
 
-        # Sidebar
-        "--ap-sidebar-bg":    "#0F172A",
-        "--ap-sidebar-text":  "#CBD5E1",
-        "--ap-sidebar-hover": "rgba(20,184,166,0.15)",
-        "--ap-sidebar-active":"#14B8A6",
+        # Sidebar — rich teal in light mode so toggle is obvious vs dark mode's black
+        "--ap-sidebar-bg":    "#0F766E",
+        "--ap-sidebar-text":  "rgba(255,255,255,0.82)",
+        "--ap-sidebar-hover": "rgba(255,255,255,0.12)",
+        "--ap-sidebar-active":"#CCFBF1",
     },
     "dark": {
         # Brand
