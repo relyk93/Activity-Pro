@@ -263,75 +263,140 @@ Return a JSON object with this exact structure:
             else:
                 st.error("API call failed. Please check your connection.")
 
-        # Preview & save
+        # ── Preview & selective save ──
         if st.session_state.get("generated_calendar"):
             cal = st.session_state.generated_calendar
-            st.markdown(f"### 🗓 Preview: {cal.get('week_theme', 'Weekly Calendar')}")
 
+            # Build a flat list of all activities with their day context
+            all_acts = []
             for day in cal.get("days", []):
-                with st.expander(
-                    f"**{day['day_name']} — {day['date']}** ({len(day['activities'])} activities)"
-                ):
-                    for act in day['activities']:
-                        cat = act.get('category', 'social')
-                        is_special = act.get('group_type') == 'special_needs'
-                        interest_note = act.get('interest_connection', '')
-                        st.markdown(f"""
-                        <div class='ap-card {"ap-card-lavender" if is_special else "ap-card-sage"}' style='margin-bottom:12px;'>
-                            <div style='display:flex; justify-content:space-between; align-items:flex-start;'>
-                                <div>
-                                    <strong style='font-size:1.05rem;'>{'🟣 ' if is_special else ''}{act['title']}</strong>
-                                    <div style='color:var(--ap-text-light); font-size:0.82rem; margin-top:3px;'>
-                                        🕐 {act.get('time','TBD')} · ⏱ {act.get('duration_minutes',60)} min ·
-                                        💰 {act.get('cost_estimate','Free')} · 📍 {act.get('location','Activity Room')}
-                                    </div>
-                                    <div style='margin-top:6px; color:var(--ap-text-mid);'>{act.get('description','')}</div>
-                                    {f"<div style='margin-top:6px; font-size:0.8rem; color:var(--ap-primary);'>🎯 {interest_note}</div>" if interest_note else ""}
-                                </div>
-                                <span class='tag tag-{cat}'>{cat.title()}</span>
-                            </div>
-                            <div style='margin-top:10px;'>
-                                <strong style='font-size:0.8rem; color:var(--ap-text-light);'>SUPPLIES:</strong>
-                                <span style='font-size:0.85rem;'> {act.get('supplies','None needed')}</span>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                for act in day.get("activities", []):
+                    all_acts.append({"day": day["day_name"], "date": day["date"], "act": act})
 
-            col_save, col_discard = st.columns(2)
-            with col_save:
-                if st.button("💾 Save Entire Week to Calendar", type="primary", use_container_width=True):
-                    saved_count = 0
-                    for day in cal.get("days", []):
-                        for act in day.get("activities", []):
-                            act_id = save_activity({
-                                "title": act['title'],
-                                "description": act.get('description', ''),
-                                "instructions": act.get('instructions', ''),
-                                "supplies": act.get('supplies', ''),
-                                "category": act.get('category', 'social'),
-                                "duration_minutes": act.get('duration_minutes', 60),
-                                "cost_estimate": act.get('cost_estimate', 'Free'),
-                                "difficulty": "easy",
-                                "group_type": act.get('group_type', 'all'),
-                                "disability_friendly": act.get('disability_friendly', ''),
-                                "is_special_needs": 1 if act.get('group_type') == 'special_needs' else 0,
-                                "created_by": "AI",
-                            })
-                            save_event({
-                                "activity_id": act_id,
-                                "title": act['title'],
-                                "date": day['date'],
-                                "time": act.get('time', '10:00 AM'),
-                                "location": act.get('location', 'Activity Room'),
-                                "group_type": act.get('group_type', 'all'),
-                                "notes": "",
-                            })
-                            saved_count += 1
-                    st.success(f"✅ {saved_count} activities saved to your calendar!")
-                    st.session_state.generated_calendar = None
+            total = len(all_acts)
+            st.markdown(f"### 🗓 {cal.get('week_theme', 'Weekly Calendar')} — {total} activities generated")
+
+            # Select-all / none controls
+            ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1, 1, 4])
+            with ctrl_col1:
+                if st.button("☑ Select All", use_container_width=True):
+                    for i in range(total):
+                        st.session_state[f"cal_sel_{i}"] = True
                     st.rerun()
-            with col_discard:
-                if st.button("🗑 Discard", use_container_width=True):
+            with ctrl_col2:
+                if st.button("☐ Select None", use_container_width=True):
+                    for i in range(total):
+                        st.session_state[f"cal_sel_{i}"] = False
+                    st.rerun()
+
+            # Initialise checkboxes to True on first render
+            for i in range(total):
+                if f"cal_sel_{i}" not in st.session_state:
+                    st.session_state[f"cal_sel_{i}"] = True
+
+            # Group by day for display
+            days_seen = {}
+            for idx, item in enumerate(all_acts):
+                day_key = item["date"]
+                if day_key not in days_seen:
+                    days_seen[day_key] = []
+                days_seen[day_key].append((idx, item))
+
+            for day_date, items in days_seen.items():
+                day_name = items[0][1]["day"]
+                selected_in_day = sum(1 for i, _ in items if st.session_state.get(f"cal_sel_{i}", True))
+                with st.expander(
+                    f"**{day_name} · {day_date}** — {selected_in_day}/{len(items)} selected",
+                    expanded=True,
+                ):
+                    for idx, item in items:
+                        act = item["act"]
+                        cat = act.get("category", "social")
+                        is_special = act.get("group_type") == "special_needs"
+                        interest_note = act.get("interest_connection", "")
+
+                        cb_col, card_col = st.columns([0.07, 0.93])
+                        with cb_col:
+                            st.session_state[f"cal_sel_{idx}"] = st.checkbox(
+                                "",
+                                value=st.session_state.get(f"cal_sel_{idx}", True),
+                                key=f"cb_{idx}",
+                                label_visibility="collapsed",
+                            )
+                        with card_col:
+                            opacity = "1" if st.session_state.get(f"cal_sel_{idx}", True) else "0.4"
+                            st.markdown(f"""
+                            <div class='ap-card {"ap-card-lavender" if is_special else "ap-card-sage"}'
+                                 style='margin-bottom:8px; opacity:{opacity}; transition:opacity 0.2s;'>
+                                <div style='display:flex; justify-content:space-between; align-items:flex-start;'>
+                                    <div>
+                                        <strong>{'🟣 ' if is_special else ''}{act['title']}</strong>
+                                        <div style='color:var(--ap-text-light); font-size:0.82rem; margin-top:2px;'>
+                                            🕐 {act.get('time','TBD')} · ⏱ {act.get('duration_minutes',60)} min ·
+                                            💰 {act.get('cost_estimate','Free')} · 📍 {act.get('location','Activity Room')}
+                                        </div>
+                                        <div style='margin-top:5px; font-size:0.88rem; color:var(--ap-text-mid);'>
+                                            {act.get('description','')}
+                                        </div>
+                                        {f"<div style='margin-top:4px; font-size:0.8rem; color:var(--ap-primary);'>🎯 {interest_note}</div>" if interest_note else ""}
+                                    </div>
+                                    <span class='tag tag-{cat}'>{cat.title()}</span>
+                                </div>
+                                <div style='margin-top:8px; font-size:0.82rem;'>
+                                    <strong style='color:var(--ap-text-light);'>SUPPLIES:</strong>
+                                    {act.get('supplies','None needed')}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+            # Count selected
+            selected_indices = [i for i in range(total) if st.session_state.get(f"cal_sel_{i}", True)]
+            selected_count = len(selected_indices)
+
+            st.markdown(f"**{selected_count} of {total} activities selected**")
+
+            save_col, discard_col = st.columns(2)
+            with save_col:
+                btn_label = f"💾 Add {selected_count} Selected to Calendar"
+                if st.button(btn_label, type="primary", use_container_width=True, disabled=selected_count == 0):
+                    saved = 0
+                    for i in selected_indices:
+                        item = all_acts[i]
+                        act = item["act"]
+                        act_id = save_activity({
+                            "title": act["title"],
+                            "description": act.get("description", ""),
+                            "instructions": act.get("instructions", ""),
+                            "supplies": act.get("supplies", ""),
+                            "category": act.get("category", "social"),
+                            "duration_minutes": act.get("duration_minutes", 60),
+                            "cost_estimate": act.get("cost_estimate", "Free"),
+                            "difficulty": "easy",
+                            "group_type": act.get("group_type", "all"),
+                            "disability_friendly": act.get("disability_friendly", ""),
+                            "is_special_needs": 1 if act.get("group_type") == "special_needs" else 0,
+                            "created_by": "AI",
+                        })
+                        save_event({
+                            "activity_id": act_id,
+                            "title": act["title"],
+                            "date": item["date"],
+                            "time": act.get("time", "10:00 AM"),
+                            "location": act.get("location", "Activity Room"),
+                            "group_type": act.get("group_type", "all"),
+                            "notes": "",
+                        })
+                        saved += 1
+                    # Clear checkboxes
+                    for i in range(total):
+                        st.session_state.pop(f"cal_sel_{i}", None)
+                    st.session_state.generated_calendar = None
+                    st.success(f"✅ {saved} activities added to your calendar!")
+                    st.rerun()
+            with discard_col:
+                if st.button("🗑 Discard All", use_container_width=True):
+                    for i in range(total):
+                        st.session_state.pop(f"cal_sel_{i}", None)
                     st.session_state.generated_calendar = None
                     st.rerun()
 
@@ -456,15 +521,60 @@ Return JSON:
             </div>
             """, unsafe_allow_html=True)
 
-            c1, c2 = st.columns(2)
+            c1, c2, c3 = st.columns(3)
             with c1:
-                if st.button("💾 Save Activity", type="primary", use_container_width=True):
+                if st.button("💾 Save to Library", type="primary", use_container_width=True):
                     save_activity(act)
                     st.success(f"✅ '{act['title']}' saved to your activity library!")
                     st.session_state.single_activity = None
             with c2:
+                if st.button("📅 Add to Calendar", use_container_width=True):
+                    st.session_state.single_add_to_cal = True
+            with c3:
                 if st.button("🔄 Regenerate", use_container_width=True):
                     st.session_state.single_activity = None
+                    st.session_state.pop("single_add_to_cal", None)
+                    st.rerun()
+
+            if st.session_state.get("single_add_to_cal"):
+                st.markdown("---")
+                st.markdown("**Schedule this activity**")
+                cal_col1, cal_col2, cal_col3 = st.columns(3)
+                with cal_col1:
+                    event_date = st.date_input("Date", value=date.today(), key="single_event_date")
+                with cal_col2:
+                    event_time = st.time_input("Time", value=None, key="single_event_time")
+                with cal_col3:
+                    event_location = st.text_input("Location", value="Activity Room", key="single_event_loc")
+
+                if st.button("✅ Confirm & Add to Calendar", type="primary", use_container_width=True):
+                    act_id = save_activity({
+                        "title": act["title"],
+                        "description": act.get("description", ""),
+                        "instructions": act.get("instructions", ""),
+                        "supplies": act.get("supplies", ""),
+                        "category": act.get("category", "social"),
+                        "duration_minutes": act.get("duration_minutes", 60),
+                        "cost_estimate": act.get("cost_estimate", "Free"),
+                        "difficulty": "easy",
+                        "group_type": act.get("group_type", "all"),
+                        "disability_friendly": act.get("disability_friendly", ""),
+                        "is_special_needs": 0,
+                        "created_by": "AI",
+                    })
+                    time_str = event_time.strftime("%I:%M %p") if event_time else "10:00 AM"
+                    save_event({
+                        "activity_id": act_id,
+                        "title": act["title"],
+                        "date": event_date.isoformat(),
+                        "time": time_str,
+                        "location": event_location,
+                        "group_type": act.get("group_type", "all"),
+                        "notes": "",
+                    })
+                    st.success(f"✅ '{act['title']}' added to calendar on {event_date}!")
+                    st.session_state.single_activity = None
+                    st.session_state.pop("single_add_to_cal", None)
                     st.rerun()
 
     # ─── Tab 3: Personalized for Resident ───
