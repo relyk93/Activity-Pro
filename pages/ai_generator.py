@@ -133,8 +133,9 @@ def show():
     if not require_pro():
         return
 
-    tab1, tab2, tab3 = st.tabs(
-        ["📅 Generate Weekly Calendar", "✨ Generate Single Activity", "🔧 Customize for Residents"]
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["📅 Generate Weekly Calendar", "✨ Generate Single Activity",
+         "🔧 Customize for Residents", "📖 Story Generator"]
     )
 
     # ─── Tab 1: Weekly Calendar ───
@@ -717,3 +718,275 @@ Return a JSON array:
                         act['is_special_needs'] = 0
                         save_activity(act)
                         st.success(f"Saved '{act['title']}'!")
+
+    # ─── Tab 4: Story Generator ───
+    with tab4:
+        st.markdown("### 📖 Personalised Story Generator")
+        st.markdown(
+            "<div style='color:var(--ap-text-light); margin-bottom:20px;'>"
+            "Generate a warm, meaningful story tailored to a resident's life and interests. "
+            "Read aloud as a group activity, print as a keepsake, or use as a reminiscence prompt. "
+            "Text costs pennies — illustration is optional at ~$0.04/image."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        residents = get_residents()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            story_for = st.selectbox(
+                "Story for",
+                ["Whole Group"] + [r["name"] for r in residents],
+                key="story_for",
+            )
+            story_type = st.selectbox(
+                "Story type",
+                [
+                    "Reminiscence / Life Story",
+                    "Adventure & Nature",
+                    "Fairy Tale / Fable",
+                    "Historical Fiction",
+                    "Holiday & Seasonal",
+                    "Inspirational / Uplifting",
+                    "Animal Story",
+                    "Mystery & Gentle Suspense",
+                    "Group Chain Story (collaborative prompt)",
+                ],
+                key="story_type",
+            )
+            story_length = st.select_slider(
+                "Length",
+                ["Short (~1 page)", "Medium (~2 pages)", "Long (~4 pages)"],
+                value="Medium (~2 pages)",
+                key="story_length",
+            )
+
+        with col2:
+            theme_setting = st.text_input(
+                "Theme or setting (optional)",
+                placeholder="e.g. 1950s diner, seaside village, autumn garden",
+                key="story_theme",
+            )
+            reading_level = st.select_slider(
+                "Reading level",
+                ["Simple & Clear", "Standard", "Rich & Descriptive"],
+                value="Standard",
+                key="story_reading_level",
+            )
+            generate_illustration = st.checkbox(
+                "Generate cover illustration 🖼",
+                value=False,
+                key="story_gen_image",
+                help="~$0.04 per image via DALL-E 3. Requires OPENAI_API_KEY in secrets.",
+            )
+            add_discussion = st.checkbox(
+                "Add discussion questions",
+                value=True,
+                key="story_discussion",
+                help="Great for group read-aloud sessions",
+            )
+
+        special_details = st.text_area(
+            "Personal details to weave in (optional)",
+            placeholder=(
+                "e.g. Margaret grew up near the sea, her late husband was a fisherman, "
+                "she loves roses and used to bake apple pie every Sunday."
+            ),
+            key="story_details",
+            height=90,
+        )
+
+        if st.button("✍️ Generate Story", type="primary", use_container_width=True):
+            if story_for != "Whole Group":
+                r = next((r for r in residents if r["name"] == story_for), None)
+                if r:
+                    resident_context = (
+                        f"Name: {r['name']}, Age {r.get('age','?')}, "
+                        f"Mobility: {r.get('mobility','')}, Cognitive: {r.get('cognitive','')}, "
+                        f"Interests/Notes: {(r.get('special_needs','') or '') + ' ' + (r.get('notes','') or '')}"
+                    )
+                else:
+                    resident_context = story_for
+            else:
+                resident_context = f"A group of {len(residents)} seniors aged 60+ with varied backgrounds"
+
+            length_words = {
+                "Short (~1 page)":    "300–400 words",
+                "Medium (~2 pages)":  "600–800 words",
+                "Long (~4 pages)":    "1200–1500 words",
+            }[story_length]
+
+            system_prompt = (
+                "You are a gifted therapeutic storyteller specialising in stories for seniors. "
+                "Your stories are warm, dignified, emotionally resonant, and accessible. "
+                "Weave in personal history naturally — never patronising, always uplifting. "
+                "Respond ONLY with valid JSON, no markdown fences, no extra text."
+            )
+
+            prompt = f"""Write a {story_type} story.
+
+Audience: {resident_context}
+Length: {length_words}
+Theme/setting: {theme_setting if theme_setting else "your choice, something warm and familiar"}
+Reading level: {reading_level}
+Personal details to include: {special_details if special_details else "None — use the resident profile above"}
+Add discussion questions: {add_discussion}
+
+Make the story feel personal, not generic. If it is a reminiscence story, draw on the resident's era,
+interests, and probable memories. The protagonist should feel recognisable and dignified.
+
+Return this exact JSON:
+{{
+  "title": "Story title",
+  "tagline": "One evocative sentence",
+  "story": "Full story text. Use \\n\\n between paragraphs.",
+  "reflection": "A gentle 1-2 sentence closing thought or moral",
+  "discussion_questions": ["Question 1?", "Question 2?", "Question 3?"],
+  "illustration_prompt": "A detailed, warm DALL-E 3 prompt for a cover illustration. No text in image."
+}}"""
+
+            with st.spinner("✍️ Crafting your story..."):
+                result = call_claude(prompt, system_prompt)
+
+            if result:
+                try:
+                    clean = result.strip().replace("```json", "").replace("```", "").strip()
+                    st.session_state.generated_story = json.loads(clean)
+                    st.session_state.story_for_display = story_for
+                    st.session_state.story_want_image = generate_illustration
+                    st.session_state.story_want_discussion = add_discussion
+                except Exception as e:
+                    st.error(f"Could not parse story response. Try again. ({e})")
+
+        # ── Display generated story ──
+        if st.session_state.get("generated_story"):
+            story = st.session_state.generated_story
+            for_name = st.session_state.get("story_for_display", "")
+            want_img  = st.session_state.get("story_want_image", False)
+            want_disc = st.session_state.get("story_want_discussion", True)
+
+            st.markdown("---")
+
+            # Optional illustration
+            img_url = None
+            if want_img:
+                with st.spinner("🖼 Generating cover illustration via DALL-E 3..."):
+                    img_url = generate_activity_image(
+                        story["title"], "storytelling",
+                        story.get("illustration_prompt", story.get("tagline", "")),
+                    )
+                if not img_url:
+                    st.caption("Image skipped — add OPENAI_API_KEY to Streamlit secrets to enable.")
+
+            if img_url:
+                st.image(img_url, caption=story["title"], use_container_width=True)
+
+            # Story card
+            for_line = (
+                f"<div style='margin-top:6px; color:var(--ap-primary); font-size:0.85rem;'>"
+                f"For {for_name}</div>"
+                if for_name and for_name != "Whole Group" else ""
+            )
+            reflection_html = (
+                f"<div style='margin-top:28px; padding-top:18px; border-top:1px solid var(--ap-border); "
+                f"color:var(--ap-text-mid); font-style:italic; font-size:0.95rem;'>"
+                f"{story['reflection']}</div>"
+            ) if story.get("reflection") else ""
+
+            st.markdown(f"""
+            <div class='ap-card' style='max-width:720px; margin:0 auto; padding:40px;'>
+                <div style='text-align:center; margin-bottom:32px;'>
+                    <h1 style='font-family:Playfair Display,serif; font-size:1.8rem;
+                               color:var(--ap-text); margin-bottom:6px;'>{story['title']}</h1>
+                    <div style='color:var(--ap-text-light); font-style:italic;'>{story.get('tagline','')}</div>
+                    {for_line}
+                </div>
+                <div style='font-size:1rem; line-height:2; color:var(--ap-text);'>
+                    {story['story'].replace(chr(10)+chr(10), '<br><br>')}
+                </div>
+                {reflection_html}
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Discussion questions
+            if want_disc and story.get("discussion_questions"):
+                st.markdown("#### 💬 Discussion Questions")
+                for i, q in enumerate(story["discussion_questions"], 1):
+                    st.markdown(f"**{i}.** {q}")
+
+            # Action buttons
+            btn1, btn2, btn3 = st.columns(3)
+
+            with btn1:
+                # Build print-ready HTML
+                disc_html = ""
+                if story.get("discussion_questions"):
+                    qs = "".join(
+                        f"<li style='margin:8px 0;'>{q}</li>"
+                        for q in story["discussion_questions"]
+                    )
+                    disc_html = (
+                        f"<div style='margin-top:40px; padding-top:24px; border-top:2px solid #E2DDD6;'>"
+                        f"<h3 style='color:#0F766E;'>💬 Discussion Questions</h3>"
+                        f"<ol style='color:#4A5568; line-height:2;'>{qs}</ol></div>"
+                    )
+                img_tag = (
+                    f"<img src='{img_url}' style='width:100%; border-radius:12px; margin-bottom:32px;'>"
+                    if img_url else ""
+                )
+                printable = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body {{font-family:Georgia,serif; max-width:680px; margin:40px auto; padding:40px;
+         color:#1A2332; background:#FFFDF9; line-height:1.9;}}
+  h1   {{font-size:2rem; text-align:center; color:#0F766E; margin-bottom:6px;}}
+  .tag {{text-align:center; color:#718096; font-style:italic; margin-bottom:32px;}}
+  .story {{font-size:1.05rem;}}
+  .reflection {{margin-top:32px; padding-top:18px; border-top:1px solid #E2DDD6;
+                color:#4A5568; font-style:italic;}}
+  .footer {{margin-top:48px; text-align:center; color:#94A3B8; font-size:0.78rem;}}
+  @media print {{body {{margin:0; padding:20px;}}}}
+</style></head>
+<body>
+  {img_tag}
+  <h1>{story['title']}</h1>
+  <div class="tag">{story.get('tagline','')}</div>
+  <div class="story">{story['story'].replace(chr(10)+chr(10),'<br><br>')}</div>
+  {f'<div class="reflection">{story["reflection"]}</div>' if story.get('reflection') else ''}
+  {disc_html}
+  <div class="footer">Generated by ActivityPro · {date.today().strftime('%B %d, %Y')}</div>
+</body></html>"""
+
+                fname = story["title"].replace(" ", "_")[:40]
+                st.download_button(
+                    "📄 Download / Print",
+                    data=printable,
+                    file_name=f"{fname}.html",
+                    mime="text/html",
+                    use_container_width=True,
+                    help="Open in browser → File → Print → Save as PDF",
+                )
+
+            with btn2:
+                if st.button("💾 Save as Activity", key="save_story_act", use_container_width=True):
+                    save_activity({
+                        "title": f"Story: {story['title']}",
+                        "description": story.get("tagline", ""),
+                        "instructions": story["story"][:2000],
+                        "supplies": "Printed copies, comfortable seating",
+                        "category": "social",
+                        "duration_minutes": 30,
+                        "cost_estimate": "Free",
+                        "difficulty": "easy",
+                        "group_type": "all",
+                        "disability_friendly": "dementia,hearing_loss,wheelchair",
+                        "is_special_needs": 0,
+                        "created_by": "AI",
+                    })
+                    st.success(f"Saved '{story['title']}' to activity library!")
+
+            with btn3:
+                if st.button("🔄 New Story", key="new_story", use_container_width=True):
+                    st.session_state.generated_story = None
+                    st.rerun()
