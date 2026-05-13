@@ -1,6 +1,9 @@
 import streamlit as st
+import json
+import requests
 from utils.database import (get_residents, get_last_activity,
-                             get_resident_mood_trend, get_engagements)
+                             get_resident_mood_trend, get_engagements,
+                             save_resident)
 from utils.database import get_at_risk_residents, get_declining_mood_residents
 from datetime import date
 
@@ -18,6 +21,59 @@ COGNITIVE_COLOR = {
     "moderate":     "var(--ap-accent)",
     "severe":       "#E53E3E",
 }
+
+
+def _generate_ai_profile(resident: dict) -> dict | None:
+    """Call Claude to generate a realistic sample care + personal profile."""
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+    except Exception:
+        api_key = ""
+    if not api_key:
+        st.error("ANTHROPIC_API_KEY not configured in Streamlit secrets.")
+        return None
+
+    prompt = f"""Generate a realistic sample profile for a senior living facility resident.
+
+Name: {resident.get('name', 'Unknown')}
+Age: {resident.get('age', 80)}
+Room: {resident.get('room', '?')}
+
+Create a believable, compassionate profile as if this were a real long-term care resident.
+Keep disabilities realistic for this age group. Interests should feel personal and specific.
+Staff notes should sound like something a care worker would actually write.
+
+Return ONLY valid JSON, no markdown:
+{{
+  "disabilities": "Comma-separated conditions (e.g. Arthritis, Mild hearing loss)",
+  "cognitive": "one of: intact / mild / moderate / severe",
+  "dietary": "Dietary needs (e.g. Low sodium, diabetic-friendly) or empty string if none",
+  "special_needs": "Comma-separated interests and hobbies (6-8 specific ones)",
+  "notes": "2-3 sentences of realistic staff notes about personality, preferences, and care tips"
+}}"""
+
+    try:
+        resp = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            json={
+                "model": "claude-haiku-4-5-20251001",
+                "max_tokens": 500,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
+            timeout=20,
+        )
+        if resp.status_code == 200:
+            text = resp.json()["content"][0]["text"]
+            clean = text.strip().replace("```json", "").replace("```", "").strip()
+            return json.loads(clean)
+    except Exception as e:
+        st.error(f"Profile generation failed: {e}")
+    return None
 
 
 def _days_since(date_str: str) -> int:
@@ -331,6 +387,90 @@ def show():
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        # ── AI Profile Suggestion ──
+        st.markdown(f"""
+        <div class='ap-card' style='margin-bottom:16px;'>
+            <div style='font-size:0.72rem; color:var(--ap-text-light); font-weight:600;
+                        text-transform:uppercase; letter-spacing:0.07em; margin-bottom:8px;'>
+                Profile Assistant
+            </div>
+            <div style='font-size:0.82rem; color:var(--ap-text-mid);'>
+                Profile fields empty or incomplete? Generate a realistic sample profile
+                with AI to use as a starting point.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        gen_key  = f"ai_profile_{r['id']}"
+        if st.button("✨ Generate Sample Profile", key=f"gen_btn_{r['id']}",
+                     use_container_width=True):
+            with st.spinner("Generating profile..."):
+                result = _generate_ai_profile(r)
+            if result:
+                st.session_state[gen_key] = result
+
+        if st.session_state.get(gen_key):
+            p = st.session_state[gen_key]
+            cog_c = COGNITIVE_COLOR.get((p.get("cognitive") or "intact").lower(),
+                                        "var(--ap-text-light)")
+            st.markdown(f"""
+            <div class='ap-card ap-card-lavender' style='margin-bottom:8px;'>
+                <div style='font-size:0.72rem; color:var(--ap-text-light); font-weight:600;
+                            text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;'>
+                    ✨ AI-Suggested Profile
+                </div>
+                <div style='margin-bottom:6px;'>
+                    <span style='font-size:0.78rem; color:var(--ap-text-light);'>CONDITIONS</span><br>
+                    <span style='font-size:0.88rem; color:var(--ap-text);'>{p.get('disabilities') or '—'}</span>
+                </div>
+                <div style='margin-bottom:6px;'>
+                    <span style='font-size:0.78rem; color:var(--ap-text-light);'>COGNITIVE</span><br>
+                    <span style='font-size:0.88rem; font-weight:600; color:{cog_c};'>
+                        {(p.get('cognitive') or 'intact').title()}
+                    </span>
+                </div>
+                <div style='margin-bottom:6px;'>
+                    <span style='font-size:0.78rem; color:var(--ap-text-light);'>DIETARY</span><br>
+                    <span style='font-size:0.88rem; color:var(--ap-text);'>{p.get('dietary') or 'None'}</span>
+                </div>
+                <div style='margin-bottom:6px;'>
+                    <span style='font-size:0.78rem; color:var(--ap-text-light);'>INTERESTS</span><br>
+                    <span style='font-size:0.88rem; color:var(--ap-text);'>{p.get('special_needs') or '—'}</span>
+                </div>
+                <div>
+                    <span style='font-size:0.78rem; color:var(--ap-text-light);'>STAFF NOTES</span><br>
+                    <span style='font-size:0.85rem; color:var(--ap-text); font-style:italic;
+                                 line-height:1.6;'>{p.get('notes') or '—'}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            save_col, discard_col = st.columns(2)
+            with save_col:
+                if st.button("💾 Save to Profile", key=f"save_prof_{r['id']}",
+                             type="primary", use_container_width=True):
+                    merged = {
+                        "name":         r.get("name", ""),
+                        "age":          r.get("age", ""),
+                        "room":         r.get("room", ""),
+                        "birthday":     r.get("birthday", ""),
+                        "mobility":     r.get("mobility", "independent"),
+                        "cognitive":    p.get("cognitive", r.get("cognitive", "intact")),
+                        "dietary":      p.get("dietary", r.get("dietary", "")),
+                        "disabilities": p.get("disabilities", r.get("disabilities", "")),
+                        "special_needs":p.get("special_needs", r.get("special_needs", "")),
+                        "notes":        p.get("notes", r.get("notes", "")),
+                    }
+                    save_resident(merged, resident_id=r["id"])
+                    st.session_state.pop(gen_key, None)
+                    st.success("Profile saved!")
+                    st.rerun()
+            with discard_col:
+                if st.button("✕ Discard", key=f"disc_prof_{r['id']}",
+                             use_container_width=True):
+                    st.session_state.pop(gen_key, None)
+                    st.rerun()
 
         # Recent session log
         st.markdown(f"""
