@@ -1,7 +1,8 @@
 import streamlit as st
 from utils.database import (get_residents, get_events, get_engagements,
                              get_at_risk_residents, get_declining_mood_residents,
-                             get_last_activity)
+                             get_last_activity, get_subscription)
+from utils.email_sender import send_email, build_staff_reminder_html
 from utils.auth import get_current_staff, is_director
 from datetime import date, timedelta
 
@@ -42,8 +43,17 @@ def show():
     engaged_count = sum(1 for e in all_eng if e['engaged'])
     eng_rate      = int(engaged_count / len(all_eng) * 100) if all_eng else 0
 
+    # Low engagement: residents with <40% across all recorded sessions
+    low_eng = []
+    for r in residents:
+        engs = get_engagements(resident_id=r['id'])
+        if engs:
+            rate = int(sum(1 for e in engs if e['engaged']) / len(engs) * 100)
+            if rate < 40:
+                low_eng.append((r, rate))
+
     # ── Alert banner ──
-    if at_risk or declining:
+    if at_risk or declining or low_eng:
         parts = []
         if at_risk:
             names = ", ".join(r['name'].split()[0] for r in at_risk[:3])
@@ -52,6 +62,9 @@ def show():
         if declining:
             names = ", ".join(r['name'].split()[0] for r in declining[:2])
             parts.append(f"**{len(declining)} residents** show declining mood ({names})")
+        if low_eng:
+            names = ", ".join(r['name'].split()[0] for r, _ in low_eng[:2])
+            parts.append(f"**{len(low_eng)} residents** below 40% engagement ({names})")
         st.markdown(f"""
         <div style='background:linear-gradient(135deg,#FBF0EA,#FEF5F0); border:1px solid #C47B5A;
                     border-left:4px solid #C47B5A; border-radius:12px; padding:14px 20px; margin-bottom:20px;'>
@@ -84,7 +97,38 @@ def show():
     with col_left:
 
         # ── Today's activities ──
-        st.markdown("### 📅 Today's Activities")
+        hdr_col, email_col = st.columns([3, 1])
+        with hdr_col:
+            st.markdown("### 📅 Today's Activities")
+        with email_col:
+            if today_events and is_director():
+                if st.button("📤 Email to Staff", key="email_staff_dash",
+                             use_container_width=True):
+                    st.session_state["dash_email_staff"] = True
+
+        if st.session_state.get("dash_email_staff") and is_director():
+            with st.form("staff_email_form"):
+                staff_addr = st.text_input("Staff email address",
+                                           placeholder="staff@facility.com")
+                sent = st.form_submit_button("Send Schedule", type="primary")
+            if sent:
+                if staff_addr:
+                    try:
+                        smtp_ok = bool(st.secrets.get("SMTP_USER", ""))
+                    except Exception:
+                        smtp_ok = False
+                    if smtp_ok:
+                        sub      = get_subscription()
+                        fname    = sub.get("facility_name", facility)
+                        html_body = build_staff_reminder_html(today_events, fname)
+                        subject   = f"Today's Activity Schedule — {today.strftime('%A, %B %d')}"
+                        ok, msg   = send_email(staff_addr, subject, html_body)
+                        st.success(f"Sent to {staff_addr}") if ok else st.error(msg)
+                    else:
+                        st.warning("Configure SMTP in Streamlit Cloud secrets to send emails.")
+                    st.session_state["dash_email_staff"] = False
+                else:
+                    st.warning("Enter an email address.")
         cat_class = {
             "physical": "ap-card-sage",   "mindful":   "ap-card-lavender",
             "social":   "ap-card-sky",    "cognitive": "ap-card-terra",
@@ -128,7 +172,7 @@ def show():
             """, unsafe_allow_html=True)
 
         # ── Needs Attention ──
-        if at_risk or declining:
+        if at_risk or declining or low_eng:
             st.markdown("### ⚠️ Needs Your Attention")
             shown = set()
             for r in at_risk + declining:
@@ -144,17 +188,34 @@ def show():
                 icon = MOBILITY_ICON.get(r.get('mobility', 'independent'), '⚪')
                 st.markdown(f"""
                 <div class='ap-card ap-card-terra' style='padding:14px 18px; margin-bottom:8px;'>
-                    <div style='display:flex; justify-content:space-between; align-items:center;'>
-                        <div>
-                            <strong style='font-size:1rem; color:var(--ap-text);'>{icon} {r['name']}</strong>
-                            <span style='color:var(--ap-text-light); font-size:0.8rem;'>
-                                &nbsp;· Rm {r.get('room','?')}
-                            </span><br>
-                            <span style='font-size:0.82rem; color:var(--ap-accent);'>
-                                {"  ·  ".join(reason)}
-                            </span><br>
-                            <span style='font-size:0.78rem; color:var(--ap-text-light);'>{last_str}</span>
-                        </div>
+                    <div>
+                        <strong style='font-size:1rem; color:var(--ap-text);'>{icon} {r['name']}</strong>
+                        <span style='color:var(--ap-text-light); font-size:0.8rem;'>
+                            &nbsp;· Rm {r.get('room','?')}
+                        </span><br>
+                        <span style='font-size:0.82rem; color:var(--ap-accent);'>
+                            {"  ·  ".join(reason)}
+                        </span><br>
+                        <span style='font-size:0.78rem; color:var(--ap-text-light);'>{last_str}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            for r, rate in low_eng:
+                if r['id'] in shown:
+                    continue
+                shown.add(r['id'])
+                icon = MOBILITY_ICON.get(r.get('mobility', 'independent'), '⚪')
+                st.markdown(f"""
+                <div class='ap-card ap-card-terra' style='padding:14px 18px; margin-bottom:8px;'>
+                    <div>
+                        <strong style='font-size:1rem; color:var(--ap-text);'>{icon} {r['name']}</strong>
+                        <span style='color:var(--ap-text-light); font-size:0.8rem;'>
+                            &nbsp;· Rm {r.get('room','?')}
+                        </span><br>
+                        <span style='font-size:0.82rem; color:var(--ap-accent);'>
+                            Low engagement — {rate}% overall
+                        </span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)

@@ -278,7 +278,6 @@ with st.sidebar:
         _nav("🖨️", "Print & Export",    "Print"),
         _nav("👨‍👩‍👧", "Family Updates",  "Family Updates"),
         _nav("🏛", "Resident Council",    "Resident Council"),
-        _nav("🔔", "Notifications",      "Notifications"),
         _nav("⚙️", "Settings",          "Settings"),
         _nav("💳", "Subscription",       "Subscription"),
         _nav("👤", "Staff Management",   "Staff Management"),
