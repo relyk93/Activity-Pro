@@ -811,9 +811,10 @@ def get_last_activity(resident_id: int) -> dict | None:
     """Return the most recent engagement record for a resident."""
     conn = get_conn()
     row = conn.execute("""
-        SELECT e.*, ev.title as event_title, ev.date as event_date, ev.category
+        SELECT e.*, ev.title as event_title, ev.date as event_date, a.category
         FROM engagements e
         JOIN calendar_events ev ON e.event_id = ev.id
+        LEFT JOIN activities a ON ev.activity_id = a.id
         WHERE e.resident_id=?
         ORDER BY ev.date DESC LIMIT 1
     """, (resident_id,)).fetchone()
