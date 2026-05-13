@@ -121,7 +121,7 @@ h1, h2, h3 {
 .sub-badge-pro        { background: linear-gradient(135deg, var(--ap-accent), #FCD34D); color: #1A0A00; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 .sub-badge-enterprise { background: linear-gradient(135deg, var(--ap-primary), var(--ap-primary-dark)); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 
-/* Streamlit buttons */
+/* Streamlit buttons — target the <p> inside because that's where Streamlit puts text */
 .stButton > button {
     font-family: 'DM Sans', sans-serif !important;
     font-weight: 600 !important;
@@ -131,31 +131,54 @@ h1, h2, h3 {
     color: var(--ap-text) !important;
     border: 1px solid var(--ap-border) !important;
 }
-/* Sidebar buttons: override the dim wildcard color with true white */
-[data-testid="stSidebar"] .stButton > button {
-    color: rgba(255,255,255,0.9) !important;
+.stButton > button p,
+.stButton > button div {
+    color: var(--ap-text) !important;
     font-weight: 600 !important;
 }
+
+/* Sidebar buttons — white text on dark sidebar, both modes */
+[data-testid="stSidebar"] .stButton > button {
+    color: #FFFFFF !important;
+}
+[data-testid="stSidebar"] .stButton > button p,
+[data-testid="stSidebar"] .stButton > button div {
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+}
+
+/* Hover — main content */
 .stButton > button:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 12px var(--ap-shadow) !important;
     border-color: var(--ap-primary) !important;
+}
+.stButton > button:hover p,
+.stButton > button:hover div {
     color: var(--ap-primary) !important;
 }
-[data-testid="stSidebar"] .stButton > button:hover {
+
+/* Hover — sidebar */
+[data-testid="stSidebar"] .stButton > button:hover p,
+[data-testid="stSidebar"] .stButton > button:hover div {
     color: var(--ap-sidebar-active) !important;
 }
+
+/* Primary buttons */
 .stButton > button[kind="primary"] {
     background: var(--ap-primary) !important;
-    color: white !important;
     border-color: var(--ap-primary) !important;
+}
+.stButton > button[kind="primary"] p,
+.stButton > button[kind="primary"] div,
+.stButton > button[kind="primary"]:hover p,
+.stButton > button[kind="primary"]:hover div,
+[data-testid="stSidebar"] .stButton > button[kind="primary"] p,
+[data-testid="stSidebar"] .stButton > button[kind="primary"] div {
+    color: #FFFFFF !important;
 }
 .stButton > button[kind="primary"]:hover {
     background: var(--ap-primary-dark) !important;
-    color: white !important;
-}
-[data-testid="stSidebar"] .stButton > button[kind="primary"] {
-    color: white !important;
 }
 
 /* Inputs */
