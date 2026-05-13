@@ -564,6 +564,47 @@ def activate_stripe_subscription(stripe_customer_id: str, stripe_subscription_id
     conn.commit()
     conn.close()
 
+def get_activity_ratings_summary():
+    """Return lists of liked and disliked activities based on average engagement rating."""
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT a.title,
+               AVG(e.rating)   AS avg_rating,
+               AVG(e.engaged)  AS avg_engaged,
+               COUNT(e.id)     AS session_count
+        FROM activities a
+        JOIN calendar_events ev ON ev.activity_id = a.id
+        JOIN engagements e      ON e.event_id = ev.id
+        GROUP BY a.id, a.title
+        HAVING session_count >= 2
+        ORDER BY avg_rating DESC
+    """).fetchall()
+    conn.close()
+    liked, disliked = [], []
+    for r in rows:
+        if r['avg_rating'] >= 3.5 and r['avg_engaged'] >= 0.6:
+            liked.append(r['title'])
+        elif r['avg_rating'] < 2.5 or r['avg_engaged'] < 0.35:
+            disliked.append(r['title'])
+    return liked, disliked
+
+def get_resident_interests():
+    """Return a deduplicated list of all interests across active residents."""
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT special_needs, notes FROM residents WHERE active=1"
+    ).fetchall()
+    conn.close()
+    interests = set()
+    for r in rows:
+        for field in (r['special_needs'], r['notes']):
+            if field:
+                for token in field.replace(',', ' ').split():
+                    clean = token.strip('.,;:').lower()
+                    if len(clean) > 3:
+                        interests.add(clean.title())
+    return sorted(interests)
+
 # ---- Staff CRUD ----
 
 def authenticate_staff(username: str, password: str):
