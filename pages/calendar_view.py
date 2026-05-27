@@ -37,6 +37,139 @@ def _supply_csv(by_day_sorted, period_label):
     return "\n".join(rows)
 
 
+def _monthly_calendar_html(month_events, month_start):
+    """Printable HTML: month grid + day-by-day schedule with per-activity supplies."""
+    import calendar as _cal
+
+    month_label = month_start.strftime("%B %Y")
+    days_in_month = _cal.monthrange(month_start.year, month_start.month)[1]
+
+    # Build events lookup by date string
+    ev_by_date = {}
+    for ev in month_events:
+        d = ev["date"]
+        if d not in ev_by_date:
+            ev_by_date[d] = []
+        ev_by_date[d].append(ev)
+
+    cat_bg = {
+        "physical": "#DEF0DE", "mindful": "#EBE4F5", "social": "#DDE8F5",
+        "cognitive": "#F5EDDD", "creative": "#FBF0EA",
+    }
+
+    # ── Month grid ──
+    first_weekday = month_start.weekday()  # 0=Mon
+    grid_html = "<table class='cal-grid'><thead><tr>"
+    for h in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
+        grid_html += f"<th>{h}</th>"
+    grid_html += "</tr></thead><tbody><tr>"
+
+    # Leading empty cells
+    for _ in range(first_weekday):
+        grid_html += "<td></td>"
+
+    for day_num in range(1, days_in_month + 1):
+        d = date(month_start.year, month_start.month, day_num)
+        day_str = d.isoformat()
+        day_events = ev_by_date.get(day_str, [])
+
+        acts_html = ""
+        for ev in day_events:
+            bg = cat_bg.get(ev.get("category", "social"), "#F5F5F5")
+            acts_html += (
+                f"<div style='background:{bg};border-radius:3px;padding:2px 4px;"
+                f"margin:2px 0;font-size:0.68rem;'>"
+                f"{ev.get('time','')[:5] if ev.get('time') else ''} {ev['title']}</div>"
+            )
+
+        is_today = d == date.today()
+        day_bg = "#0F766E" if is_today else "transparent"
+        day_color = "white" if is_today else "#1A2332"
+        grid_html += (
+            f"<td><div style='background:{day_bg};color:{day_color};border-radius:4px;"
+            f"width:22px;height:22px;display:flex;align-items:center;justify-content:center;"
+            f"font-weight:700;font-size:0.82rem;margin-bottom:4px;'>{day_num}</div>"
+            f"{acts_html}</td>"
+        )
+
+        # New row after Sunday
+        if d.weekday() == 6 and day_num < days_in_month:
+            grid_html += "</tr><tr>"
+
+    # Trailing empty cells
+    last_weekday = date(month_start.year, month_start.month, days_in_month).weekday()
+    for _ in range(6 - last_weekday):
+        grid_html += "<td></td>"
+    grid_html += "</tr></tbody></table>"
+
+    # ── Day-by-day schedule with supplies ──
+    schedule_html = ""
+    for day_num in range(1, days_in_month + 1):
+        d = date(month_start.year, month_start.month, day_num)
+        day_str = d.isoformat()
+        day_events = ev_by_date.get(day_str, [])
+        if not day_events:
+            continue
+
+        schedule_html += (
+            f"<div class='day-block'>"
+            f"<div class='day-header'>{d.strftime('%A, %B %d')}</div>"
+        )
+        for ev in sorted(day_events, key=lambda e: e.get("time", "")):
+            bg = cat_bg.get(ev.get("category", "social"), "#F5F5F5")
+            supplies = (ev.get("supplies") or "None").strip()
+            schedule_html += (
+                f"<div class='act-block' style='border-left:4px solid {bg};'>"
+                f"<div class='act-title'>{ev.get('time', '')} &nbsp; {ev['title']}</div>"
+                f"<div class='act-meta'>"
+                f"⏱ {ev.get('duration_minutes', 60)} min &nbsp;|&nbsp; "
+                f"📍 {ev.get('location', 'Activity Room')} &nbsp;|&nbsp; "
+                f"💰 {ev.get('cost_estimate', 'Free')}</div>"
+                f"<div class='act-supplies'>🛒 <strong>Supplies:</strong> {supplies}</div>"
+            )
+            if ev.get("description"):
+                schedule_html += f"<div class='act-desc'>{ev['description']}</div>"
+            schedule_html += "</div>"
+        schedule_html += "</div>"
+
+    return f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+  body{{font-family:Arial,sans-serif;max-width:960px;margin:32px auto;padding:32px;
+       color:#1A2332;background:#FFFDF9;}}
+  h1{{color:#0F766E;font-size:1.8rem;margin-bottom:4px;}}
+  h2{{color:#2D6A4F;font-size:1.2rem;border-bottom:2px solid #0F766E;
+      padding-bottom:6px;margin-top:40px;}}
+  .cal-grid{{width:100%;border-collapse:collapse;margin-bottom:40px;}}
+  .cal-grid th{{background:#0F766E;color:white;padding:8px;text-align:center;
+               font-size:0.85rem;}}
+  .cal-grid td{{border:1px solid #E2DDD6;padding:6px;vertical-align:top;
+               min-width:100px;min-height:80px;font-size:0.78rem;}}
+  .day-block{{margin-bottom:28px;page-break-inside:avoid;}}
+  .day-header{{background:#0F766E;color:white;padding:8px 14px;border-radius:6px;
+              font-weight:700;font-size:1rem;margin-bottom:8px;}}
+  .act-block{{padding:10px 14px;margin-bottom:8px;border-radius:0 8px 8px 0;
+             background:#F8FAFC;border:1px solid #E2DDD6;}}
+  .act-title{{font-weight:700;font-size:0.95rem;margin-bottom:4px;}}
+  .act-meta{{font-size:0.8rem;color:#718096;margin-bottom:4px;}}
+  .act-supplies{{font-size:0.82rem;color:#2D6A4F;margin-bottom:4px;}}
+  .act-desc{{font-size:0.82rem;color:#4A5568;font-style:italic;}}
+  .footer{{margin-top:48px;text-align:center;color:#94A3B8;font-size:0.75rem;}}
+  @media print{{
+    body{{margin:0;padding:16px;}}
+    h2{{page-break-before:always;}}
+    .day-block{{page-break-inside:avoid;}}
+  }}
+</style></head><body>
+<h1>📅 {month_label} Activity Calendar</h1>
+<p style='color:#718096;margin-bottom:24px;'>Generated by ActivityPro</p>
+<h2>Monthly Overview</h2>
+{grid_html}
+<h2>Daily Schedule &amp; Supplies</h2>
+{schedule_html if schedule_html else "<p style='color:#718096;'>No activities scheduled this month.</p>"}
+<div class='footer'>ActivityPro &nbsp;·&nbsp; {date.today().strftime('%B %d, %Y')}</div>
+</body></html>"""
+
+
 def _supply_html(by_day_sorted, consolidated, period_label):
     rows_html = ""
     for d, acts in by_day_sorted:
@@ -89,6 +222,36 @@ def show():
         if st.button("Next Week →"):
             st.session_state.cal_week_start += timedelta(days=7)
             st.rerun()
+
+    # ── Month download buttons ──
+    month_start = week_start.replace(day=1)
+    days_in_month = calendar.monthrange(month_start.year, month_start.month)[1]
+    month_end = month_start + timedelta(days=days_in_month - 1)
+    month_label = month_start.strftime("%B %Y")
+    month_events = get_events(date_from=str(month_start), date_to=str(month_end))
+
+    dl_c1, dl_c2 = st.columns(2)
+    with dl_c1:
+        cal_html = _monthly_calendar_html(month_events, month_start)
+        st.download_button(
+            f"📥 Download {month_label} Calendar",
+            data=cal_html,
+            file_name=f"calendar_{month_label.replace(' ','_')}.html",
+            mime="text/html",
+            use_container_width=True,
+            help="Opens in browser — File → Print → Save as PDF",
+        )
+    with dl_c2:
+        by_day_sorted_m, consolidated_m = _parse_supplies(month_events)
+        supply_html_m = _supply_html(by_day_sorted_m, consolidated_m, month_label)
+        st.download_button(
+            f"🛒 Download {month_label} Supply List",
+            data=supply_html_m,
+            file_name=f"supplies_{month_label.replace(' ','_')}.html",
+            mime="text/html",
+            use_container_width=True,
+            help="Opens in browser — File → Print → Save as PDF",
+        )
 
     st.markdown("---")
 
