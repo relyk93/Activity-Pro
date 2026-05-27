@@ -200,6 +200,15 @@ def show():
                 placeholder="e.g. Margaret's birthday, Fall theme",
             )
 
+            st.caption("Days to generate activities for")
+            days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            day_cols = st.columns(7)
+            active_days = []
+            for i, day_name in enumerate(days_of_week):
+                default_checked = day_name not in ("Saturday", "Sunday")
+                if day_cols[i].checkbox(day_name[:3], value=default_checked, key=f"day_sel_{day_name}"):
+                    active_days.append(day_name)
+
         with col2:
             focus_areas = st.multiselect(
                 "Focus areas",
@@ -239,7 +248,9 @@ def show():
         existing_titles = [a['title'] for a in get_activities()]
 
         btn_label = "🗓 Generate Monthly Calendar" if is_monthly else "🤖 Generate Weekly Calendar"
-        if st.button(btn_label, type="primary", use_container_width=True):
+        if not active_days:
+            st.warning("Select at least one day above before generating.")
+        if st.button(btn_label, type="primary", use_container_width=True, disabled=not active_days):
             disabilities_list = ", ".join(all_disabilities) if all_disabilities else "None noted"
             resident_summary = (
                 f"{len(residents)} residents aged 60+. "
@@ -262,18 +273,37 @@ Always spread categories across the day: physical/active early, cognitive/social
 The final activity each day MUST be the specified wind-down activity — gentle, calming, no supplies needed.
 Respond ONLY with valid JSON, no markdown, no extra text."""
 
+            active_days_set = set(active_days)
+
             def _build_week_prompt(week_start_d, week_label=""):
-                return f"""Create a {daily_count + 1}-activity-per-day calendar for a senior living facility.
+                # Compute exact dates within this 7-day window that match selected days
+                selected_dates = []
+                for offset in range(7):
+                    d = week_start_d + timedelta(days=offset)
+                    if d.strftime("%A") in active_days_set:
+                        selected_dates.append(d)
+
+                if not selected_dates:
+                    return None
+
+                dates_str = "\n".join(
+                    f"  - {d.strftime('%A')} {d.isoformat()}" for d in selected_dates
+                )
+
+                return f"""Create a {daily_count + 1}-activity-per-day activity calendar for a senior living facility.
 
 Resident profile: {resident_summary}
 Resident interests: {interests_str}
-Week starting: {week_start_d} {week_label}
 Focus areas: {', '.join(focus_areas)}
 Budget: {budget}
 Special occasions: {special_occasions if special_occasions else 'None'}
 Include special needs activities: {include_special}
+{f'({week_label})' if week_label else ''}
 
-ACTIVITY STRUCTURE — follow exactly:
+GENERATE ONLY FOR THESE SPECIFIC DATES — no other days:
+{dates_str}
+
+ACTIVITY STRUCTURE — follow exactly for each day:
 - Activities 1–{daily_count}: varied active/social/cognitive activities (morning to afternoon)
 - Activity {daily_count + 1} (LAST): ALWAYS "{rest_type}" — a gentle wind-down session.
   Use title "{rest_type}", category "mindful", time "3:00 PM", duration 30 min, cost Free,
@@ -333,7 +363,10 @@ Return a JSON object:
                         int(wi / len(week_starts) * 100),
                         text=f"Generating {week_label}…",
                     )
-                    res = call_claude(_build_week_prompt(ws, week_label), system_prompt)
+                    week_prompt = _build_week_prompt(ws, week_label)
+                    if not week_prompt:
+                        continue  # no selected days fall in this week chunk
+                    res = call_claude(week_prompt, system_prompt)
                     if res:
                         try:
                             clean = res.strip().replace("```json", "").replace("```", "").strip()
@@ -361,8 +394,12 @@ Return a JSON object:
                 else:
                     st.error("Monthly generation failed. Check your API key and try again.")
             else:
+                week_prompt = _build_week_prompt(start_date)
+                if not week_prompt:
+                    st.error("None of the selected days fall within the chosen week. Adjust your day selection or start date.")
+                    st.stop()
                 with st.spinner("🌸 Crafting your personalised week…"):
-                    result = call_claude(_build_week_prompt(start_date), system_prompt)
+                    result = call_claude(week_prompt, system_prompt)
 
                 if result:
                     try:
