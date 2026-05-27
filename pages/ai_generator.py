@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import requests
+import calendar as cal_module
 from utils.auth import require_pro
 from utils.database import (get_residents, save_activity, save_event,
                              get_activities, get_activity_ratings_summary,
@@ -138,9 +139,9 @@ def show():
          "🔧 Customize for Residents", "📖 Story Generator"]
     )
 
-    # ─── Tab 1: Weekly Calendar ───
+    # ─── Tab 1: Weekly / Monthly Calendar ───
     with tab1:
-        st.markdown("### Generate a Full Week of Activities")
+        st.markdown("### Generate Activity Calendar")
 
         residents = get_residents()
         liked_activities, disliked_activities = get_activity_ratings_summary()
@@ -152,16 +153,50 @@ def show():
                     if d:
                         all_disabilities.add(d)
 
+        # ── Mode selector ──
+        gen_mode = st.radio(
+            "Generate for",
+            ["📅 Week (7 days)", "🗓 Month (28–31 days)"],
+            horizontal=True,
+        )
+        is_monthly = "Month" in gen_mode
+
         col1, col2 = st.columns(2)
         with col1:
-            week_start = st.date_input(
-                "Week Starting",
-                value=date.today() - timedelta(days=date.today().weekday()),
+            if is_monthly:
+                mc1, mc2 = st.columns(2)
+                with mc1:
+                    sel_month = st.selectbox(
+                        "Month",
+                        range(1, 13),
+                        index=date.today().month - 1,
+                        format_func=lambda m: date(2000, m, 1).strftime("%B"),
+                    )
+                with mc2:
+                    sel_year = st.selectbox(
+                        "Year",
+                        range(date.today().year, date.today().year + 2),
+                    )
+                start_date = date(sel_year, sel_month, 1)
+            else:
+                start_date = st.date_input(
+                    "Week Starting",
+                    value=date.today() - timedelta(days=date.today().weekday()),
+                )
+
+            daily_count = st.slider(
+                "Active activities per day",
+                3, 5, 5,
+                help="A 6th wind-down activity is always added automatically.",
             )
-            daily_count = st.slider("Activities per day", 2, 5, 3)
+            rest_type = st.radio(
+                "6th activity (wind-down)",
+                ["Rest & Relax", "Rest & Reflect"],
+                horizontal=True,
+            )
             include_special = st.checkbox("Include special needs group activities", value=True)
             special_occasions = st.text_input(
-                "Special occasions this week?",
+                "Special occasions?" if is_monthly else "Special occasions this week?",
                 placeholder="e.g. Margaret's birthday, Fall theme",
             )
 
@@ -203,7 +238,8 @@ def show():
 
         existing_titles = [a['title'] for a in get_activities()]
 
-        if st.button("🤖 Generate Weekly Calendar", type="primary", use_container_width=True):
+        btn_label = "🗓 Generate Monthly Calendar" if is_monthly else "🤖 Generate Weekly Calendar"
+        if st.button(btn_label, type="primary", use_container_width=True):
             disabilities_list = ", ".join(all_disabilities) if all_disabilities else "None noted"
             resident_summary = (
                 f"{len(residents)} residents aged 60+. "
@@ -220,28 +256,36 @@ def show():
 
             system_prompt = """You are an expert senior activity director with 20+ years of experience.
 You create engaging, therapeutic, joyful activities for seniors aged 60+.
-You deeply understand dementia care, mobility limitations, sensory impairments, and emotional wellbeing.
-Always design activities that are safe, low-cost, emotionally meaningful, dignity-preserving, and evidence-based.
+You understand dementia care, mobility limitations, sensory impairments, and emotional wellbeing.
+Design activities that are safe, low-cost, emotionally meaningful, dignity-preserving, and evidence-based.
+Always spread categories across the day: physical/active early, cognitive/social mid-day, mindful/creative afternoon.
+The final activity each day MUST be the specified wind-down activity — gentle, calming, no supplies needed.
 Respond ONLY with valid JSON, no markdown, no extra text."""
 
-            prompt = f"""Create a complete weekly activity calendar for a senior living facility.
+            def _build_week_prompt(week_start_d, week_label=""):
+                return f"""Create a {daily_count + 1}-activity-per-day calendar for a senior living facility.
 
 Resident profile: {resident_summary}
-Resident interests to incorporate: {interests_str}
-Week starting: {week_start}
-Activities per day: {daily_count}
+Resident interests: {interests_str}
+Week starting: {week_start_d} {week_label}
 Focus areas: {', '.join(focus_areas)}
 Budget: {budget}
 Special occasions: {special_occasions if special_occasions else 'None'}
 Include special needs activities: {include_special}
 
-RATINGS INTELLIGENCE — use this to personalise the calendar:
-- Residents loved these activities (safe to repeat if allowed): {liked_str}
-- Residents did NOT engage well with these — avoid or significantly modify: {disliked_str}
-- {repeat_instruction}
-- Avoid duplicating these existing activities (unless in liked list): {', '.join(existing_titles[:20])}
+ACTIVITY STRUCTURE — follow exactly:
+- Activities 1–{daily_count}: varied active/social/cognitive activities (morning to afternoon)
+- Activity {daily_count + 1} (LAST): ALWAYS "{rest_type}" — a gentle wind-down session.
+  Use title "{rest_type}", category "mindful", time "3:00 PM", duration 30 min, cost Free,
+  supplies "Comfortable seating", group_type "all".
 
-Return a JSON object with this exact structure:
+RATINGS INTELLIGENCE:
+- Residents loved (safe to reuse if allowed): {liked_str}
+- Avoid or rethink: {disliked_str}
+- {repeat_instruction}
+- Don't duplicate: {', '.join(existing_titles[:20])}
+
+Return a JSON object:
 {{
   "week_theme": "theme name",
   "days": [
@@ -258,7 +302,7 @@ Return a JSON object with this exact structure:
           "cost_estimate": "Free",
           "description": "Brief engaging description",
           "instructions": "Step 1: ...\\nStep 2: ...\\nStep 3: ...",
-          "supplies": "Item 1, Item 2, Item 3",
+          "supplies": "Item 1, Item 2",
           "disability_friendly": "wheelchair,dementia,arthritis",
           "location": "Activity Room",
           "interest_connection": "Which resident interests this serves"
@@ -268,20 +312,68 @@ Return a JSON object with this exact structure:
   ]
 }}"""
 
-            with st.spinner("🌸 Crafting your personalised week..."):
-                result = call_claude(prompt, system_prompt)
+            if is_monthly:
+                # Build list of week start dates covering the full month
+                days_in_month = cal_module.monthrange(start_date.year, start_date.month)[1]
+                month_end = start_date + timedelta(days=days_in_month - 1)
+                week_starts = []
+                d = start_date
+                while d <= month_end:
+                    week_starts.append(d)
+                    d += timedelta(days=7)
 
-            if result:
-                try:
-                    clean = result.strip().replace("```json", "").replace("```", "").strip()
-                    calendar_data = json.loads(clean)
+                all_days = []
+                month_theme = f"{start_date.strftime('%B %Y')} Calendar"
+                progress = st.progress(0, text="Starting monthly generation...")
+
+                for wi, ws in enumerate(week_starts):
+                    # Clip last week to not exceed month end
+                    week_label = f"(Week {wi + 1} of {len(week_starts)})"
+                    progress.progress(
+                        int(wi / len(week_starts) * 100),
+                        text=f"Generating {week_label}…",
+                    )
+                    res = call_claude(_build_week_prompt(ws, week_label), system_prompt)
+                    if res:
+                        try:
+                            clean = res.strip().replace("```json", "").replace("```", "").strip()
+                            week_data = json.loads(clean)
+                            # Only keep days within the actual month
+                            for day in week_data.get("days", []):
+                                try:
+                                    day_d = date.fromisoformat(day["date"])
+                                    if start_date <= day_d <= month_end:
+                                        all_days.append(day)
+                                except Exception:
+                                    all_days.append(day)
+                            if wi == 0:
+                                month_theme = week_data.get("week_theme", month_theme)
+                        except Exception as e:
+                            st.warning(f"Week {wi + 1} parse error — skipped. ({e})")
+                    else:
+                        st.warning(f"Week {wi + 1} generation failed — skipped.")
+
+                progress.progress(100, text="Done!")
+                if all_days:
+                    calendar_data = {"week_theme": month_theme, "days": all_days}
                     st.session_state.generated_calendar = calendar_data
-                    st.session_state.week_start_for_save = week_start
-                    st.success(f"✅ Generated: **{calendar_data.get('week_theme', 'Weekly Activities')}**")
-                except Exception as e:
-                    st.error(f"Could not parse AI response. Please try again. ({e})")
+                    st.success(f"✅ Generated **{len(all_days)} days** for {start_date.strftime('%B %Y')}: **{month_theme}**")
+                else:
+                    st.error("Monthly generation failed. Check your API key and try again.")
             else:
-                st.error("API call failed. Please check your connection.")
+                with st.spinner("🌸 Crafting your personalised week…"):
+                    result = call_claude(_build_week_prompt(start_date), system_prompt)
+
+                if result:
+                    try:
+                        clean = result.strip().replace("```json", "").replace("```", "").strip()
+                        calendar_data = json.loads(clean)
+                        st.session_state.generated_calendar = calendar_data
+                        st.success(f"✅ Generated: **{calendar_data.get('week_theme', 'Weekly Activities')}**")
+                    except Exception as e:
+                        st.error(f"Could not parse AI response. Please try again. ({e})")
+                else:
+                    st.error("API call failed. Please check your connection.")
 
         # ── Preview & selective save ──
         if st.session_state.get("generated_calendar"):
