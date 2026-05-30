@@ -215,10 +215,12 @@ def show():
                 FOCUS_AREAS,
                 default=["Physical", "Mindful", "Social"],
             )
-            budget = st.selectbox(
-                "Weekly budget",
+            budget_options = st.multiselect(
+                "Weekly budget (select all that apply)",
                 ["Free / No Cost", "Under $20", "Under $50", "No limit"],
+                default=["Free / No Cost", "Under $20"],
             )
+            budget = " and ".join(budget_options) if budget_options else "No limit"
             allow_repeats = st.checkbox(
                 "Allow repeating highly-rated activities",
                 value=True,
