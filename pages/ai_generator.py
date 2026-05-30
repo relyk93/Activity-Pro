@@ -15,7 +15,7 @@ FOCUS_AREAS = [
     "Photo & Memory", "Music & Movement", "Sensory Stimulation",
     "Spiritual / Reflective", "Nature & Outdoors", "Culinary",
     "Intergenerational", "Life Skills", "Reminiscence Therapy",
-    "Pet Therapy", "Art Therapy", "Trivia & Education",
+    "Pet Therapy", "Art Therapy", "Trivia & Education", "Aromatherapy",
 ]
 
 PRESET_INTERESTS = [
