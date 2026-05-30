@@ -49,7 +49,7 @@ FACILITY_REQUIREMENTS = [
 
 # Which week number(s) within a month each monthly requirement gets scheduled
 _MONTHLY_WEEK_SCHEDULE = {
-    "resident_council_monthly": {1},
+    "resident_council_monthly": {4},
     "health_info_monthly":      {2},
     "family_night_monthly":     {3},
     "science_monthly":          {1, 3},
