@@ -400,9 +400,10 @@ GENERATE ONLY FOR THESE SPECIFIC DATES — no other days:
 {dates_str}
 
 ACTIVITY STRUCTURE — follow exactly for each day:
+- ALL activities are exactly 60 minutes. This is a standard facility time block. Residents who finish early reflect or continue at their own pace; those who want more time can request it. Set duration_minutes to 60 for every activity without exception.
 - Activities 1–{daily_count}: varied active/social/cognitive activities (morning to afternoon)
 - Activity {daily_count + 1} (LAST): ALWAYS "{rest_type}" — a gentle wind-down session.
-  Use title "{rest_type}", category "mindful", time "3:00 PM", duration 30 min, cost Free,
+  Use title "{rest_type}", category "mindful", time "3:00 PM", duration_minutes 60, cost Free,
   supplies "Comfortable seating", group_type "all".
 
 RATINGS INTELLIGENCE:
@@ -424,7 +425,7 @@ Return a JSON object:
           "time": "10:00 AM",
           "category": "physical|mindful|social|cognitive|creative",
           "group_type": "all|special_needs",
-          "duration_minutes": 45,
+          "duration_minutes": 60,
           "cost_estimate": "Free",
           "description": "Brief engaging description",
           "instructions": "3 concise steps, e.g. Step 1: ... Step 2: ... Step 3: ...",
@@ -462,7 +463,7 @@ Return a JSON object:
                     week_prompt = _build_week_prompt(ws, week_label, week_num=wi + 1)
                     if not week_prompt:
                         continue  # no selected days fall in this week chunk
-                    res = call_claude(week_prompt, system_prompt, max_tokens=8000)
+                    res = call_claude(week_prompt, system_prompt, max_tokens=16000)
                     if res:
                         try:
                             clean = res.strip().replace("```json", "").replace("```", "").strip()
@@ -495,7 +496,7 @@ Return a JSON object:
                     st.error("None of the selected days fall within the chosen week. Adjust your day selection or start date.")
                     st.stop()
                 with st.spinner("🌸 Crafting your personalised week…"):
-                    result = call_claude(week_prompt, system_prompt, max_tokens=8000)
+                    result = call_claude(week_prompt, system_prompt, max_tokens=16000)
 
                 if result:
                     try:
