@@ -299,23 +299,17 @@ def show():
 
     # ── Daily Flyer Generator ──
     st.markdown("### 🖨 Daily Activity Flyer")
-    fly_c1, fly_c2 = st.columns([2, 3])
-    with fly_c1:
-        flyer_date = st.date_input("Choose a day", value=date.today(), key="flyer_date_picker")
-    with fly_c2:
-        flyer_events = get_events(date_from=str(flyer_date), date_to=str(flyer_date))
-        if flyer_events:
-            st.caption(f"{len(flyer_events)} {'activity' if len(flyer_events) == 1 else 'activities'} scheduled — ready to print.")
-        else:
-            st.caption("No activities on this day yet. Generate a calendar first.")
-        st.download_button(
-            f"📄 Download Flyer — {flyer_date.strftime('%A, %B %d')}",
-            data=_daily_flyer_html(flyer_events, flyer_date),
-            file_name=f"flyer_{flyer_date.isoformat()}.html",
-            mime="text/html",
-            use_container_width=True,
-            help="Open in browser → File → Print. Works great on coloured paper!",
-        )
+    flyer_date = st.date_input("Choose a day to print a flyer for", value=date.today(), key="flyer_date_v2")
+    flyer_events = get_events(date_from=str(flyer_date), date_to=str(flyer_date))
+    n = len(flyer_events)
+    st.caption(f"{n} {'activity' if n == 1 else 'activities'} on {flyer_date.strftime('%A, %B %d')}." if n else f"No activities on {flyer_date.strftime('%A, %B %d')} yet — generate a calendar first.")
+    st.download_button(
+        label=f"📄 Download Flyer — {flyer_date.strftime('%A, %B %d')}",
+        data=_daily_flyer_html(flyer_events, flyer_date),
+        file_name=f"flyer_{flyer_date.isoformat()}.html",
+        mime="text/html",
+        help="Open in browser → File → Print. Great on coloured paper!",
+    )
 
     st.markdown("---")
 
