@@ -412,7 +412,7 @@ RATINGS INTELLIGENCE:
 - {repeat_instruction}
 - Don't duplicate: {', '.join(existing_titles[:20])}
 
-Return a JSON object:
+Return a JSON object. Keep description to one sentence — brevity is required to fit output limits:
 {{
   "week_theme": "theme name",
   "days": [
@@ -427,12 +427,9 @@ Return a JSON object:
           "group_type": "all|special_needs",
           "duration_minutes": 60,
           "cost_estimate": "Free",
-          "description": "Brief engaging description",
-          "instructions": "3 concise steps, e.g. Step 1: ... Step 2: ... Step 3: ...",
+          "description": "One sentence.",
           "supplies": "Item 1, Item 2",
-          "disability_friendly": "wheelchair,dementia,arthritis",
-          "location": "Activity Room",
-          "interest_connection": "Which resident interests this serves"
+          "location": "Activity Room"
         }}
       ]
     }}
@@ -463,7 +460,7 @@ Return a JSON object:
                     week_prompt = _build_week_prompt(ws, week_label, week_num=wi + 1)
                     if not week_prompt:
                         continue  # no selected days fall in this week chunk
-                    res = call_claude(week_prompt, system_prompt, max_tokens=16000)
+                    res = call_claude(week_prompt, system_prompt, max_tokens=8000)
                     if res:
                         try:
                             clean = res.strip().replace("```json", "").replace("```", "").strip()
@@ -496,7 +493,7 @@ Return a JSON object:
                     st.error("None of the selected days fall within the chosen week. Adjust your day selection or start date.")
                     st.stop()
                 with st.spinner("🌸 Crafting your personalised week…"):
-                    result = call_claude(week_prompt, system_prompt, max_tokens=16000)
+                    result = call_claude(week_prompt, system_prompt, max_tokens=8000)
 
                 if result:
                     try:
