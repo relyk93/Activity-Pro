@@ -350,7 +350,7 @@ def show():
     st.markdown("---")
 
     # ── Daily Flyer Generator ──
-    with st.expander("🖨 Daily Activity Flyer", expanded=False):
+    with st.expander("🖨 Daily Activity Flyer", expanded=True):
         flyer_date = st.date_input(
             "Generate flyer for",
             value=date.today(),
