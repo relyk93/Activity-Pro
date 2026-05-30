@@ -32,6 +32,30 @@ PRESET_INTERESTS = [
     "Manicures & Beauty", "Volunteering & Helping Others",
 ]
 
+FACILITY_REQUIREMENTS = [
+    ("exercise_daily",           "Exercise / Physical Activity",  "daily — every active day"),
+    ("mens_group_weekly",        "Men's Group",                   "weekly (at least once)"),
+    ("spiritual_weekly",         "Spiritual Activity",            "2–3× per week"),
+    ("outing_weekly",            "Community Outing",              "weekly (at least once)"),
+    ("therapeutic_art_weekly",   "Therapeutic Art",               "2–3× per week"),
+    ("therapeutic_music_weekly", "Therapeutic Music",             "2–3× per week"),
+    ("aromatherapy_weekly",      "Aromatherapy (include cooking)", "weekly (at least once)"),
+    ("family_night_monthly",     "Family Night",                  "monthly"),
+    ("health_info_monthly",      "Health Information Activity",   "monthly"),
+    ("science_monthly",          "Science Activity",              "2–3× per month"),
+    ("animal_monthly",           "Animal / Pet Activity",         "2–3× per month"),
+    ("resident_council_monthly", "Resident Council Meeting",      "monthly (mandatory)"),
+]
+
+# Which week number(s) within a month each monthly requirement gets scheduled
+_MONTHLY_WEEK_SCHEDULE = {
+    "resident_council_monthly": {1},
+    "health_info_monthly":      {2},
+    "family_night_monthly":     {3},
+    "science_monthly":          {1, 3},
+    "animal_monthly":           {2, 4},
+}
+
 
 def call_claude(prompt, system_prompt, max_tokens=4000):
     try:
@@ -143,6 +167,21 @@ def show():
     with tab1:
         st.markdown("### Generate Activity Calendar")
 
+        with st.expander("🏥 Facility Settings", expanded=False):
+            fc1, fc2 = st.columns(2)
+            with fc1:
+                st.text_input(
+                    "Facility Name",
+                    key="facility_name",
+                    placeholder="e.g. Sunrise Senior Living",
+                )
+            with fc2:
+                st.text_input(
+                    "Program Name",
+                    key="program_name",
+                    placeholder="e.g. Enrichment Activities Program",
+                )
+
         residents = get_residents()
         liked_activities, disliked_activities = get_activity_ratings_summary()
         all_disabilities = set()
@@ -230,6 +269,29 @@ def show():
         # Interests panel
         selected_interests = _interests_section(residents)
 
+        # Facility compliance requirements
+        with st.expander("📋 Facility Compliance Requirements", expanded=False):
+            st.caption(
+                "Requirements your facility must meet. Checked items are scheduled first — "
+                "the AI fills remaining slots with general programming."
+            )
+            if "outing_location" not in st.session_state:
+                st.session_state["outing_location"] = "McMinnville, Oregon and surrounding area"
+            st.text_input(
+                "Outing location",
+                key="outing_location",
+                placeholder="e.g. McMinnville, Oregon",
+            )
+            st.markdown("**Requirements to enforce:**")
+            req_c1, req_c2 = st.columns(2)
+            for ri, (req_key, req_label, req_freq) in enumerate(FACILITY_REQUIREMENTS):
+                target_col = req_c1 if ri % 2 == 0 else req_c2
+                target_col.checkbox(
+                    f"{req_label} ({req_freq})",
+                    value=True,
+                    key=f"req_{req_key}",
+                )
+
         # Ratings summary callout
         if liked_activities or disliked_activities:
             with st.expander("📊 Ratings intelligence — what the AI will use", expanded=False):
@@ -267,6 +329,21 @@ def show():
                 else "Do NOT repeat any existing activities."
             )
 
+            # Build facility requirements for prompt injection
+            outing_loc = st.session_state.get("outing_location", "McMinnville, Oregon and surrounding area")
+            weekly_req_lines = []
+            monthly_reqs_active = {}
+            for req_key, req_label, req_freq in FACILITY_REQUIREMENTS:
+                if st.session_state.get(f"req_{req_key}", True):
+                    if req_key.endswith("_monthly"):
+                        monthly_reqs_active[req_key] = (req_label, req_freq)
+                    elif req_key == "outing_weekly":
+                        weekly_req_lines.append(
+                            f"  - {req_label}: {req_freq} (location: {outing_loc})"
+                        )
+                    else:
+                        weekly_req_lines.append(f"  - {req_label}: {req_freq}")
+
             system_prompt = """You are an expert senior activity director with 20+ years of experience.
 You create engaging, therapeutic, joyful activities for seniors aged 60+.
 You understand dementia care, mobility limitations, sensory impairments, and emotional wellbeing.
@@ -277,7 +354,7 @@ Respond ONLY with valid JSON, no markdown, no extra text."""
 
             active_days_set = set(active_days)
 
-            def _build_week_prompt(week_start_d, week_label=""):
+            def _build_week_prompt(week_start_d, week_label="", week_num=1):
                 # Compute exact dates within this 7-day window that match selected days
                 selected_dates = []
                 for offset in range(7):
@@ -292,6 +369,23 @@ Respond ONLY with valid JSON, no markdown, no extra text."""
                     f"  - {d.strftime('%A')} {d.isoformat()}" for d in selected_dates
                 )
 
+                # Assemble requirements section for this specific week
+                req_lines = list(weekly_req_lines)
+                for req_key, (req_label, req_freq) in monthly_reqs_active.items():
+                    scheduled_weeks = _MONTHLY_WEEK_SCHEDULE.get(req_key, {1})
+                    if week_num in scheduled_weeks:
+                        req_lines.append(
+                            f"  - {req_label}: include this week ({req_freq})"
+                        )
+                req_section = ""
+                if req_lines:
+                    req_section = (
+                        "\nMANDATORY FACILITY REQUIREMENTS — schedule these FIRST, "
+                        "then fill remaining slots with varied programming:\n"
+                        + "\n".join(req_lines)
+                        + "\n"
+                    )
+
                 return f"""Create a {daily_count + 1}-activity-per-day activity calendar for a senior living facility.
 
 Resident profile: {resident_summary}
@@ -301,7 +395,7 @@ Budget: {budget}
 Special occasions: {special_occasions if special_occasions else 'None'}
 Include special needs activities: {include_special}
 {f'({week_label})' if week_label else ''}
-
+{req_section}
 GENERATE ONLY FOR THESE SPECIFIC DATES — no other days:
 {dates_str}
 
@@ -365,7 +459,7 @@ Return a JSON object:
                         int(wi / len(week_starts) * 100),
                         text=f"Generating {week_label}…",
                     )
-                    week_prompt = _build_week_prompt(ws, week_label)
+                    week_prompt = _build_week_prompt(ws, week_label, week_num=wi + 1)
                     if not week_prompt:
                         continue  # no selected days fall in this week chunk
                     res = call_claude(week_prompt, system_prompt, max_tokens=8000)
