@@ -33,7 +33,7 @@ PRESET_INTERESTS = [
 ]
 
 
-def call_claude(prompt, system_prompt):
+def call_claude(prompt, system_prompt, max_tokens=4000):
     try:
         api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
     except Exception:
@@ -44,7 +44,7 @@ def call_claude(prompt, system_prompt):
 
     payload = {
         "model": "claude-sonnet-4-20250514",
-        "max_tokens": 4000,
+        "max_tokens": max_tokens,
         "system": system_prompt,
         "messages": [{"role": "user", "content": prompt}],
     }
@@ -54,7 +54,7 @@ def call_claude(prompt, system_prompt):
         "anthropic-version": "2023-06-01",
     }
     try:
-        resp = requests.post(ANTHROPIC_API_URL, json=payload, headers=headers, timeout=60)
+        resp = requests.post(ANTHROPIC_API_URL, json=payload, headers=headers, timeout=120)
     except requests.RequestException as exc:
         st.error(f"AI request failed: {exc}")
         return None
@@ -331,7 +331,7 @@ Return a JSON object:
           "duration_minutes": 45,
           "cost_estimate": "Free",
           "description": "Brief engaging description",
-          "instructions": "Step 1: ...\\nStep 2: ...\\nStep 3: ...",
+          "instructions": "3 concise steps, e.g. Step 1: ... Step 2: ... Step 3: ...",
           "supplies": "Item 1, Item 2",
           "disability_friendly": "wheelchair,dementia,arthritis",
           "location": "Activity Room",
@@ -366,7 +366,7 @@ Return a JSON object:
                     week_prompt = _build_week_prompt(ws, week_label)
                     if not week_prompt:
                         continue  # no selected days fall in this week chunk
-                    res = call_claude(week_prompt, system_prompt)
+                    res = call_claude(week_prompt, system_prompt, max_tokens=8000)
                     if res:
                         try:
                             clean = res.strip().replace("```json", "").replace("```", "").strip()
@@ -382,7 +382,7 @@ Return a JSON object:
                             if wi == 0:
                                 month_theme = week_data.get("week_theme", month_theme)
                         except Exception as e:
-                            st.warning(f"Week {wi + 1} parse error — skipped. ({e})")
+                            st.warning(f"Week {wi + 1} ({ws}) parse error — skipped. Try reducing active activities per day or selected days. ({e})")
                     else:
                         st.warning(f"Week {wi + 1} generation failed — skipped.")
 
@@ -399,7 +399,7 @@ Return a JSON object:
                     st.error("None of the selected days fall within the chosen week. Adjust your day selection or start date.")
                     st.stop()
                 with st.spinner("🌸 Crafting your personalised week…"):
-                    result = call_claude(week_prompt, system_prompt)
+                    result = call_claude(week_prompt, system_prompt, max_tokens=8000)
 
                 if result:
                     try:
