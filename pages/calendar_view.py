@@ -4,6 +4,26 @@ from datetime import date, timedelta
 import calendar
 
 
+def _fmt_time(t, short=False):
+    """Normalize any time string to 12-hour AM/PM format.
+    short=True returns compact form (e.g. '10am', '2pm') for tight spaces."""
+    if not t:
+        return ""
+    t = str(t).strip()
+    from datetime import datetime as _dt
+    for fmt in ("%I:%M %p", "%I:%M%p", "%H:%M"):
+        try:
+            dt = _dt.strptime(t.upper().replace(".", ""), fmt.upper())
+            h, m, mer = dt.hour, dt.minute, "AM" if dt.hour < 12 else "PM"
+            h12 = dt.hour % 12 or 12
+            if short:
+                return f"{h12}:{m:02d}{mer.lower()}" if m else f"{h12}{mer.lower()}"
+            return f"{h12}:{m:02d} {mer}"
+        except ValueError:
+            continue
+    return t
+
+
 def _parse_supplies(events):
     """Return (by_day, consolidated) from a list of DB event dicts."""
     skip = {"none", "none needed", "nothing", "n/a", ""}
@@ -82,7 +102,7 @@ def _monthly_calendar_html(month_events, month_start):
             acts_html += (
                 f"<div style='background:{bg};border-radius:3px;padding:2px 4px;"
                 f"margin:2px 0;font-size:0.68rem;'>"
-                f"{ev.get('time','')[:5] if ev.get('time') else ''} {ev['title']}</div>"
+                f"{_fmt_time(ev.get('time',''), short=True)} {ev['title']}</div>"
             )
 
         is_today = d == date.today()
@@ -123,7 +143,7 @@ def _monthly_calendar_html(month_events, month_start):
             supplies = (ev.get("supplies") or "None").strip()
             schedule_html += (
                 f"<div class='act-block' style='border-left:4px solid {bg};'>"
-                f"<div class='act-title'>{ev.get('time', '')} &nbsp; {ev['title']}</div>"
+                f"<div class='act-title'>{_fmt_time(ev.get('time', ''))} &nbsp; {ev['title']}</div>"
                 f"<div class='act-meta'>"
                 f"⏱ {ev.get('duration_minutes', 60)} min &nbsp;|&nbsp; "
                 f"📍 {ev.get('location', 'Activity Room')} &nbsp;|&nbsp; "
@@ -409,7 +429,7 @@ def show():
                 border = "2px solid #9B8EC4" if is_special else "none"
                 st.markdown(f"""
                 <div style='background:{bg}; color:{fg}; border-radius:8px; padding:6px 8px; margin-bottom:6px; font-size:0.75rem; font-weight:600; border:{border}; cursor:pointer;'>
-                    {'🟣 ' if is_special else ''}{ev.get('time','?')} {ev['title']}
+                    {'🟣 ' if is_special else ''}{_fmt_time(ev.get('time','?'))} {ev['title']}
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button("View", key=f"view_{ev['id']}", use_container_width=True):
@@ -525,7 +545,7 @@ def show():
                     {'<span style="background:#EBE4F5;color:#5A3A7F;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;border:1px solid #9B8EC4;">🟣 Special Needs Group</span>' if is_special else '<span style="background:#DEF0DE;color:#3A6B3A;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">👥 All Residents</span>'}
                 </div>
                 <h2 style='margin:0 0 8px 0;'>{ev['title']}</h2>
-                <div style='color:#718096; margin-bottom:16px;'>📅 {ev['date']} &nbsp;|&nbsp; 🕐 {ev.get('time','TBD')} &nbsp;|&nbsp; 📍 {ev.get('location','Activity Room')} &nbsp;|&nbsp; ⏱ {ev.get('duration_minutes', 60)} min &nbsp;|&nbsp; 💰 {ev.get('cost_estimate','Free')}</div>
+                <div style='color:#718096; margin-bottom:16px;'>📅 {ev['date']} &nbsp;|&nbsp; 🕐 {_fmt_time(ev.get('time','TBD'))} &nbsp;|&nbsp; 📍 {ev.get('location','Activity Room')} &nbsp;|&nbsp; ⏱ {ev.get('duration_minutes', 60)} min &nbsp;|&nbsp; 💰 {ev.get('cost_estimate','Free')}</div>
             </div>
             """, unsafe_allow_html=True)
 
