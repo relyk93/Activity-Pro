@@ -45,6 +45,9 @@ FACILITY_REQUIREMENTS = [
     ("science_monthly",          "Science Activity",              "2–3× per month"),
     ("animal_monthly",           "Animal / Pet Activity",         "2–3× per month"),
     ("resident_council_monthly", "Resident Council Meeting",      "monthly (mandatory)"),
+    ("food_chat_monthly",        "Food Chat / Nutrition Talk",    "monthly (week 3)"),
+    ("town_hall_monthly",        "Town Hall Meeting",             "monthly (week 4)"),
+    ("farmers_market_thursday",  "Farmers Market Outing",        "every Thursday 12–6 PM (local farmers market)"),
 ]
 
 # Which week number(s) within a month each monthly requirement gets scheduled
@@ -54,7 +57,60 @@ _MONTHLY_WEEK_SCHEDULE = {
     "family_night_monthly":     {3},
     "science_monthly":          {1, 3},
     "animal_monthly":           {2, 4},
+    "food_chat_monthly":        {3},
+    "town_hall_monthly":        {4},
 }
+
+
+def _nth_weekday(year, month, weekday, n):
+    d = date(year, month, 1)
+    delta = (weekday - d.weekday()) % 7
+    return d + timedelta(days=delta + 7 * (n - 1))
+
+def _last_weekday(year, month, weekday):
+    import calendar as _c
+    last = date(year, month, _c.monthrange(year, month)[1])
+    delta = (last.weekday() - weekday) % 7
+    return last - timedelta(days=delta)
+
+def _us_holidays(year):
+    """Return {date: holiday_name} for major US holidays and seasonal events."""
+    h = {
+        date(year, 1, 1):  "New Year's Day",
+        date(year, 2, 14): "Valentine's Day",
+        date(year, 3, 17): "St. Patrick's Day",
+        date(year, 7, 4):  "Independence Day / 4th of July",
+        date(year, 10, 31):"Halloween",
+        date(year, 11, 11):"Veterans Day",
+        date(year, 12, 24):"Christmas Eve",
+        date(year, 12, 25):"Christmas Day",
+        date(year, 12, 31):"New Year's Eve",
+        date(year, 3, 20): "First Day of Spring",
+        date(year, 6, 21): "First Day of Summer",
+        date(year, 9, 22): "First Day of Fall / Autumn",
+        date(year, 12, 21):"First Day of Winter",
+        _nth_weekday(year, 1, 0, 3):  "Martin Luther King Jr. Day",
+        _nth_weekday(year, 2, 0, 3):  "Presidents' Day",
+        _nth_weekday(year, 5, 6, 2):  "Mother's Day",
+        _last_weekday(year, 5, 0):    "Memorial Day",
+        _nth_weekday(year, 6, 6, 3):  "Father's Day",
+        _nth_weekday(year, 9, 0, 1):  "Labor Day",
+        _nth_weekday(year, 10, 0, 2): "Columbus Day",
+        _nth_weekday(year, 11, 3, 4): "Thanksgiving",
+    }
+    return h
+
+def _parse_time_hour(t):
+    """Convert '8:00 AM' / '12:00 PM' string to 24-hour integer."""
+    from datetime import datetime as _dt
+    return _dt.strptime(t, "%I:%M %p").hour
+
+def _hour_label(h):
+    """Convert 24-hour int to '10:00 AM' style string."""
+    if h == 0:   return "12:00 AM"
+    if h == 12:  return "12:00 PM"
+    if h < 12:   return f"{h}:00 AM"
+    return f"{h - 12}:00 PM"
 
 
 def call_claude(prompt, system_prompt, max_tokens=4000):
@@ -181,6 +237,22 @@ def show():
                     key="program_name",
                     placeholder="e.g. Enrichment Activities Program",
                 )
+            st.markdown("**Meal Times** — activities are scheduled around these")
+            _MEAL_OPTS = [
+                "6:00 AM","6:30 AM","7:00 AM","7:30 AM","8:00 AM","8:30 AM","9:00 AM",
+                "11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM",
+                "4:00 PM","4:30 PM","5:00 PM","5:30 PM","6:00 PM","6:30 PM",
+            ]
+            mt1, mt2, mt3 = st.columns(3)
+            with mt1:
+                st.selectbox("Breakfast", _MEAL_OPTS,
+                             index=_MEAL_OPTS.index("8:00 AM"), key="meal_breakfast")
+            with mt2:
+                st.selectbox("Lunch", _MEAL_OPTS,
+                             index=_MEAL_OPTS.index("12:00 PM"), key="meal_lunch")
+            with mt3:
+                st.selectbox("Dinner / Wind-down", _MEAL_OPTS,
+                             index=_MEAL_OPTS.index("5:00 PM"), key="meal_dinner")
 
         residents = get_residents()
         liked_activities, disliked_activities = get_activity_ratings_summary()
@@ -234,9 +306,10 @@ def show():
                 horizontal=True,
             )
             include_special = st.checkbox("Include special needs group activities", value=True)
-            special_occasions = st.text_input(
-                "Special occasions?" if is_monthly else "Special occasions this week?",
-                placeholder="e.g. Margaret's birthday, Fall theme",
+            special_occasions = st.text_area(
+                "Special events & occasions" if is_monthly else "Special events this week?",
+                placeholder="e.g. Father's Day BBQ 6/17, Medford Cruise 6/20, Margaret's birthday",
+                height=80,
             )
 
             st.caption("Days to generate activities for")
@@ -329,14 +402,29 @@ def show():
                 else "Do NOT repeat any existing activities."
             )
 
+            # Compute activity time slots from meal settings
+            breakfast_t = st.session_state.get("meal_breakfast", "8:00 AM")
+            lunch_t     = st.session_state.get("meal_lunch",     "12:00 PM")
+            dinner_t    = st.session_state.get("meal_dinner",    "5:00 PM")
+            lunch_h  = _parse_time_hour(lunch_t)
+            dinner_h = _parse_time_hour(dinner_t)
+            # Slots: pre-lunch, then post-lunch up to pre-dinner
+            raw_slots = [lunch_h - 1] + [lunch_h + i for i in range(1, dinner_h - lunch_h)]
+            raw_slots = sorted(set(h for h in raw_slots if 8 <= h < dinner_h))[:5]
+            activity_times = [_hour_label(h) for h in raw_slots]
+            windown_time   = dinner_t
+
             # Build facility requirements for prompt injection
             outing_loc = st.session_state.get("outing_location", "McMinnville, Oregon and surrounding area")
             weekly_req_lines = []
             monthly_reqs_active = {}
+            thursday_reqs_active = {}
             for req_key, req_label, req_freq in FACILITY_REQUIREMENTS:
                 if st.session_state.get(f"req_{req_key}", True):
                     if req_key.endswith("_monthly"):
                         monthly_reqs_active[req_key] = (req_label, req_freq)
+                    elif req_key.endswith("_thursday"):
+                        thursday_reqs_active[req_key] = (req_label, req_freq)
                     elif req_key == "outing_weekly":
                         weekly_req_lines.append(
                             f"  - {req_label}: {req_freq} (location: {outing_loc})"
@@ -377,6 +465,12 @@ Respond ONLY with valid JSON, no markdown, no extra text."""
                         req_lines.append(
                             f"  - {req_label}: include this week ({req_freq})"
                         )
+                # Thursday-specific requirements (Farmers Market etc.)
+                has_thursday = any(d.strftime("%A") == "Thursday" for d in selected_dates)
+                if has_thursday:
+                    for req_key, (req_label, req_freq) in thursday_reqs_active.items():
+                        req_lines.append(f"  - {req_label}: {req_freq} — schedule on Thursday")
+
                 req_section = ""
                 if req_lines:
                     req_section = (
@@ -386,24 +480,46 @@ Respond ONLY with valid JSON, no markdown, no extra text."""
                         + "\n"
                     )
 
+                # Holiday / observance detection
+                year = selected_dates[0].year
+                holidays_map = _us_holidays(year)
+                week_holidays = {
+                    d: name for d, name in holidays_map.items()
+                    if d in set(selected_dates)
+                }
+                holiday_section = ""
+                if week_holidays:
+                    hlines = "\n".join(
+                        f"  - {d.strftime('%A %B %d')}: {name}"
+                        for d, name in sorted(week_holidays.items())
+                    )
+                    holiday_section = (
+                        "\nHOLIDAYS / OBSERVANCES THIS PERIOD — "
+                        "create at least one themed activity for each:\n"
+                        + hlines + "\n"
+                    )
+
+                times_str = ", ".join(activity_times[:daily_count]) if activity_times else "11:00 AM, 1:00 PM, 2:00 PM, 3:00 PM, 4:00 PM"
+
                 return f"""Create a {daily_count + 1}-activity-per-day activity calendar for a senior living facility.
 
 Resident profile: {resident_summary}
 Resident interests: {interests_str}
 Focus areas: {', '.join(focus_areas)}
 Budget: {budget}
-Special occasions: {special_occasions if special_occasions else 'None'}
+Meals: Breakfast {breakfast_t} · Lunch {lunch_t} · Dinner {dinner_t}
+Special events: {special_occasions if special_occasions else 'None'}
 Include special needs activities: {include_special}
 {f'({week_label})' if week_label else ''}
-{req_section}
+{req_section}{holiday_section}
 GENERATE ONLY FOR THESE SPECIFIC DATES — no other days:
 {dates_str}
 
 ACTIVITY STRUCTURE — follow exactly for each day:
-- ALL activities are exactly 60 minutes. This is a standard facility time block. Residents who finish early reflect or continue at their own pace; those who want more time can request it. Set duration_minutes to 60 for every activity without exception.
-- Activities 1–{daily_count}: varied active/social/cognitive activities (morning to afternoon)
-- Activity {daily_count + 1} (LAST): ALWAYS "{rest_type}" — a gentle wind-down session.
-  Use title "{rest_type}", category "mindful", time "3:00 PM", duration_minutes 60, cost Free,
+- ALL activities are exactly 60 minutes (facility standard). Set duration_minutes to 60 for every activity.
+- Schedule the {daily_count} active activities at these exact times: {times_str}
+- Activity {daily_count + 1} (LAST, wind-down): ALWAYS "{rest_type}" at {windown_time}.
+  Use title "{rest_type}", category "mindful", time "{windown_time}", duration_minutes 60, cost Free,
   supplies "Comfortable seating", group_type "all".
 
 RATINGS INTELLIGENCE:
