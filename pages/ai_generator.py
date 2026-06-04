@@ -47,7 +47,7 @@ FACILITY_REQUIREMENTS = [
     ("resident_council_monthly", "Resident Council Meeting",      "monthly (mandatory)"),
     ("food_chat_monthly",        "Food Chat / Nutrition Talk",    "monthly (week 3)"),
     ("town_hall_monthly",        "Town Hall Meeting",             "monthly (week 4)"),
-    ("farmers_market_thursday",  "Farmers Market Outing",        "every Thursday 12–6 PM (local farmers market)"),
+    ("bingo_weekly",             "Bingo",                        "weekly — see frequency below"),
 ]
 
 # Which week number(s) within a month each monthly requirement gets scheduled
@@ -358,12 +358,21 @@ def show():
             st.markdown("**Requirements to enforce:**")
             req_c1, req_c2 = st.columns(2)
             for ri, (req_key, req_label, req_freq) in enumerate(FACILITY_REQUIREMENTS):
+                label = f"{req_label} ({req_freq})" if req_key != "bingo_weekly" else "Bingo"
                 target_col = req_c1 if ri % 2 == 0 else req_c2
-                target_col.checkbox(
-                    f"{req_label} ({req_freq})",
-                    value=True,
-                    key=f"req_{req_key}",
-                )
+                target_col.checkbox(label, value=True, key=f"req_{req_key}")
+
+            if st.session_state.get("req_bingo_weekly", True):
+                bc1, bc2 = st.columns(2)
+                with bc1:
+                    st.selectbox(
+                        "Bingo — days per week",
+                        ["1 day / week", "2 days / week", "3 days / week"],
+                        index=1,
+                        key="bingo_freq",
+                    )
+                with bc2:
+                    st.caption("Preferred time: **2:00 PM**")
 
         # Ratings summary callout
         if liked_activities or disliked_activities:
@@ -425,6 +434,11 @@ def show():
                         monthly_reqs_active[req_key] = (req_label, req_freq)
                     elif req_key.endswith("_thursday"):
                         thursday_reqs_active[req_key] = (req_label, req_freq)
+                    elif req_key == "bingo_weekly":
+                        bingo_freq = st.session_state.get("bingo_freq", "2 days / week")
+                        weekly_req_lines.append(
+                            f"  - Bingo: {bingo_freq}, preferred time 2:00 PM"
+                        )
                     elif req_key == "outing_weekly":
                         weekly_req_lines.append(
                             f"  - {req_label}: {req_freq} (location: {outing_loc})"
