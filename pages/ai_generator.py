@@ -48,6 +48,7 @@ FACILITY_REQUIREMENTS = [
     ("food_chat_monthly",        "Food Chat / Nutrition Talk",    "monthly (week 3)"),
     ("town_hall_monthly",        "Town Hall Meeting",             "monthly (week 4)"),
     ("bingo_weekly",             "Bingo",                        "weekly — see frequency below"),
+    ("discussions_dawn_thursday","Discussions with Dawn",        "every Thursday 11:00 AM — Activities Room"),
 ]
 
 # Which week number(s) within a month each monthly requirement gets scheduled
