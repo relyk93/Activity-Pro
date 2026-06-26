@@ -45,7 +45,7 @@ FACILITY_REQUIREMENTS = [
     ("science_monthly",          "Science Activity",              "2–3× per month"),
     ("animal_monthly",           "Animal / Pet Activity",         "2–3× per month"),
     ("resident_council_monthly", "Resident Council Meeting",      "monthly (mandatory)"),
-    ("food_chat_monthly",        "Food Chat / Nutrition Talk",    "monthly (week 3)"),
+    ("food_chat_monthly",        "Food Chat / Nutrition Talk",    "1st Wednesday of month, 10:00 AM"),
     ("town_hall_monthly",        "Town Hall Meeting",             "monthly (week 4)"),
     ("bingo_weekly",             "Bingo",                        "weekly — see frequency below"),
     ("discussions_dawn_thursday","Discussions with Dawn",        "every Thursday 11:00 AM — Activities Room"),
@@ -58,7 +58,7 @@ _MONTHLY_WEEK_SCHEDULE = {
     "family_night_monthly":     {3},
     "science_monthly":          {1, 3},
     "animal_monthly":           {2, 4},
-    "food_chat_monthly":        {3},
+    "food_chat_monthly":        {1},
     "town_hall_monthly":        {4},
 }
 
