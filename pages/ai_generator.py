@@ -299,13 +299,9 @@ def show():
             daily_count = st.slider(
                 "Active activities per day",
                 3, 5, 5,
-                help="A 6th wind-down activity is always added automatically.",
+                help="A 6th Movie Matinee is always added automatically.",
             )
-            rest_type = st.radio(
-                "6th activity (wind-down)",
-                ["Rest & Relax", "Rest & Reflect"],
-                horizontal=True,
-            )
+            st.caption("🎬 6th activity: Movie Matinee — AI generates a genre each day")
             include_special = st.checkbox("Include special needs group activities", value=True)
             special_occasions = st.text_area(
                 "Special events & occasions" if is_monthly else "Special events this week?",
@@ -451,8 +447,8 @@ def show():
 You create engaging, therapeutic, joyful activities for seniors aged 60+.
 You understand dementia care, mobility limitations, sensory impairments, and emotional wellbeing.
 Design activities that are safe, low-cost, emotionally meaningful, dignity-preserving, and evidence-based.
-Always spread categories across the day: physical/active early, cognitive/social mid-day, mindful/creative afternoon.
-The final activity each day MUST be the specified wind-down activity — gentle, calming, no supplies needed.
+Always spread categories across the day: physical/active early, cognitive/social mid-day, creative/therapeutic afternoon.
+The final activity each day MUST be Movie Matinee — a different genre each day chosen to match the week theme.
 Respond ONLY with valid JSON, no markdown, no extra text."""
 
             active_days_set = set(active_days)
@@ -533,9 +529,13 @@ GENERATE ONLY FOR THESE SPECIFIC DATES — no other days:
 ACTIVITY STRUCTURE — follow exactly for each day:
 - ALL activities are exactly 60 minutes (facility standard). Set duration_minutes to 60 for every activity.
 - Schedule the {daily_count} active activities at these exact times: {times_str}
-- Activity {daily_count + 1} (LAST, wind-down): ALWAYS "{rest_type}" at {windown_time}.
-  Use title "{rest_type}", category "mindful", time "{windown_time}", duration_minutes 60, cost Free,
-  supplies "Comfortable seating", group_type "all".
+- Activity {daily_count + 1} (LAST): ALWAYS "Movie Matinee" at {windown_time}.
+  Pick a different senior-friendly movie genre each day that fits the week theme (e.g. Classic Western,
+  Musical, Comedy, Romance, Nature Documentary, Holiday Film, Drama, Adventure).
+  Use title "Movie Matinee: [Genre]" (e.g. "Movie Matinee: Classic Western"),
+  category "social", time "{windown_time}", duration_minutes 60, cost "Free",
+  supplies "Projector or large-screen TV, popcorn, comfortable seating", group_type "all".
+  Description: name the genre and give one sentence on why residents will enjoy it. Vary genre every day.
 
 RATINGS INTELLIGENCE:
 - Residents loved (safe to reuse if allowed): {liked_str}
