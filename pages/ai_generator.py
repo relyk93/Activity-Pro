@@ -124,7 +124,7 @@ def call_claude(prompt, system_prompt, max_tokens=4000):
         return None
 
     payload = {
-        "model": "claude-sonnet-4-20250514",
+        "model": "claude-sonnet-4-6",
         "max_tokens": max_tokens,
         "system": system_prompt,
         "messages": [{"role": "user", "content": prompt}],
